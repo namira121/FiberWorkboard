@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <script src="/assets/csrf.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#10638b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<title>Dashboard Public - Section Viber</title>
+<style>
+
+
+
+:root{--sidebar:#10638b;--blue:#1479e8;--ink:#182433;--muted:#8290a3;--line:#e6edf4;--bg:#f4f7fb}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--ink);font-size:13px}
+.app{display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:208px;background:var(--sidebar);color:#fff;display:flex;flex-direction:column;padding:22px 14px 16px;transition:width .25s;flex-shrink:0}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 7px 30px;white-space:nowrap;overflow:hidden}
+.brand-mark{width:38px;height:38px;border:none;border-radius:50%;background:#d5e8f2;color:var(--sidebar);display:grid;place-items:center;font-size:17px;font-weight:800;flex-shrink:0;cursor:pointer}
+.brand-mark:hover{background:#fff}
+.brand-name{font-size:14px;font-weight:700}
+.nav{display:grid;gap:7px}
+.nav a{display:flex;align-items:center;gap:12px;color:#dcecf5;text-decoration:none;padding:11px 12px;border-radius:7px;white-space:nowrap;overflow:hidden}
+.nav a:hover,.nav a.active{background:#fff;color:#12618a}
+.nav .ico{width:17px;text-align:center;font-size:14px;flex-shrink:0}
+.sidebar-bottom{margin-top:auto;padding:20px 7px 0}
+.logout{width:100%;border:none;background:#fff;color:#263747;padding:10px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600}
+
+/* MAIN */
+.main{min-width:0;flex:1;display:flex;flex-direction:column}
+.topbar{height:58px;display:flex;align-items:center;padding:0 28px;background:#fff;border-bottom:1px solid var(--line)}
+.crumb{color:var(--muted);font-size:13px}
+.content{padding:26px 28px 24px;flex:1}
+.heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:20px}
+.heading h1{font-size:25px;margin:0 0 7px;font-weight:700}
+.heading p{margin:0;color:var(--muted);font-size:13px}
+.date-note{font-size:11px;color:var(--muted);background:#fff;border:1px solid var(--line);padding:9px 12px;border-radius:8px;white-space:nowrap}
+.heading-side{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.heading-side .date-note{margin-top:0}
+.hbtn{display:inline-flex;align-items:center;gap:7px;border:1px solid transparent;border-radius:8px;padding:10px 14px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap}
+.hbtn.primary{background:var(--sidebar);color:#fff}
+.hbtn.primary:hover{background:#0d5578}
+
+/* FORM TUGAS MANUAL (INLINE) */
+.manual-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 24px 20px;margin-bottom:16px;box-shadow:0 3px 12px #24364b05}
+.manual-title{margin:0 0 16px;font-size:19px;font-weight:750}
+.manual-grid{display:grid;grid-template-columns:minmax(120px,1fr) minmax(200px,2.4fr) minmax(120px,1.1fr) 84px minmax(180px,1.5fr);gap:14px;align-items:start}
+.f-material{order:1}.f-work{order:2}.f-so{order:3}.f-qty{order:4}.f-nik{order:5}
+.m-field{min-width:0}
+.m-field label{display:block;font-size:12px;font-weight:600;margin-bottom:7px;color:#66768a}
+.m-field input{width:100%;min-width:0;height:42px;background:#fff;border:1px solid #dfe7ef;border-radius:9px;padding:0 12px;color:#354356;outline:none;font:inherit}
+.m-field input:focus{border-color:#8fbdf5;box-shadow:0 0 0 3px #e4f0ff}
+.nik-row{display:flex;gap:6px}
+.nik-add{width:42px;height:42px;flex-shrink:0;border:1px solid #cfe1f6;background:#f0f7ff;color:#1769b2;border-radius:9px;font-size:17px;font-weight:700;cursor:pointer;padding:0}
+.nik-add:hover{background:#e2efff}
+.nik-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+.nik-chips:empty{display:none}
+.nik-chip{display:inline-flex;align-items:center;gap:7px;background:#edf5ff;color:#1769b2;border-radius:8px;padding:6px 6px 6px 10px;font-size:11px;font-weight:650}
+.nik-chip small{color:#7891a9;font-weight:500;font-size:10px}
+.nik-chip button{border:none;background:#d6e8fb;color:#1769b2;width:19px;height:19px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1;padding:0}
+.nik-chip button:hover{background:#f6c9c7;color:#c83e39}
+.manual-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-top:16px}
+.manual-msg{min-width:0;flex:1}
+.m-hint{font-size:11px;color:#9aa5b3;line-height:1.5}
+.manual-submit{border:none;background:#2a5f8f;color:#fff;border-radius:10px;padding:13px 24px;font:inherit;font-size:13px;font-weight:650;cursor:pointer;white-space:nowrap}
+.manual-submit:hover{background:#224f78}
+
+/* FILTER */
+.filters{display:grid;grid-template-columns:190px minmax(180px,1fr) 160px;gap:10px;margin-bottom:15px}
+.field{height:42px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #dfe7ef;border-radius:8px;padding:0 11px;color:var(--muted);min-width:0}
+.field input,.field select{border:none;outline:none;background:transparent;width:100%;font:inherit;color:#354356;min-width:0}
+.field select{cursor:pointer}
+
+/* TABLE */
+.table-card{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 3px 12px #24364b05}
+.table-scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:1180px}
+thead{background:#fbfcfe}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:#8794a5;font-weight:700;text-align:left;padding:16px 13px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:17px 13px;border-bottom:1px solid #edf1f5;vertical-align:middle;font-size:12px}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#fbfdff}
+.material{font-weight:700;color:#1476d4;white-space:nowrap}
+.work{font-weight:600;color:#273548;min-width:140px;display:block}
+.so,.qty{white-space:nowrap}
+
+/* BARIS PER INDIVIDU (tim, progress, status harus sejajar) */
+.pl{height:34px;display:flex;align-items:center;margin-bottom:9px}
+.pl:last-child{margin-bottom:0}
+.team-col{min-width:130px}
+.progress-cell{min-width:160px}
+.progress-btn{display:flex;align-items:center;gap:9px;width:100%;height:34px;padding:0 6px;margin:0 -6px;border:none;background:transparent;border-radius:8px;font-family:inherit;cursor:pointer;transition:background .15s}
+.progress-btn:hover{background:#eef6ff}
+.progress-btn:focus-visible{outline:2px solid #8fbdf5}
+.progress-btn.static{cursor:default}
+.progress-btn.static:hover{background:transparent}
+.track{height:5px;background:#e6edf4;border-radius:99px;flex:1;min-width:65px;overflow:hidden}
+.fill{height:100%;background:#287ce8;border-radius:99px}
+.fill.gray{background:#b9c5d0}
+.percent{font-size:10px;color:#8491a1;min-width:28px;text-align:right}
+.team-chip{display:inline-flex;align-items:center;padding:6px 9px;border-radius:7px;background:#edf5ff;color:#1769b2;font-size:11px;font-weight:650;white-space:nowrap}
+.team-empty{color:#9aa5b3;font-size:11px;font-style:italic}
+
+/* STATUS */
+.status{display:inline-block;padding:6px 9px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap;border:none;cursor:default;font-family:inherit}
+.status.has-reason{cursor:pointer}
+.status.has-reason:hover{filter:brightness(.96);box-shadow:0 0 0 2px #dbeafe}
+.s-progress{color:#1874d2;background:#e9f3ff}
+.s-done{color:#168454;background:#e6f8ef}
+.s-planning{color:#667486;background:#eef1f5}
+.s-pending{color:#b77916;background:#fff4d9}
+.s-cancel{color:#d94b48;background:#ffeded}
+
+/* KOLOM AKSI */
+.action-col{width:1%;white-space:nowrap}
+.actions{display:flex;gap:6px}
+.icon-btn{width:32px;height:32px;display:grid;place-items:center;border:1px solid #dfe7ef;background:#fff;color:#4d6178;border-radius:8px;cursor:pointer;font-size:14px;padding:0;transition:.15s}
+.icon-btn:hover{background:#f0f7ff;border-color:#bdd9ff;color:#1769b2}
+.icon-btn:disabled{opacity:.4;cursor:not-allowed;background:#fff;border-color:#dfe7ef;color:#4d6178}
+.icon-btn.has-count{position:relative}
+.icon-btn .count{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;border-radius:99px;background:#1479e8;color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center;padding:0 4px}
+
+/* FOOTER TABEL */
+.table-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-top:1px solid var(--line);color:#8794a5;font-size:11px}
+.pagination{display:flex;gap:5px}
+.page{border:1px solid #e0e7ef;background:#fff;color:#718096;border-radius:5px;padding:6px 9px;cursor:pointer}
+.page.active{background:#eaf3ff;border-color:#bdd9ff;color:#126fd0}
+.empty{text-align:center;padding:35px;color:#8794a5}
+.footer{background:#073d65;color:#c5d6e2;display:flex;justify-content:space-between;gap:14px;padding:14px 25px;font-size:10px}
+.footer strong{color:#fff}
+
+/* COLLAPSE SIDEBAR */
+.collapsed .sidebar{width:68px;padding-left:10px;padding-right:10px}
+.collapsed .brand{padding-left:5px;padding-right:0}
+.collapsed .brand-name,.collapsed .nav-label{display:none}
+.collapsed .nav a{justify-content:center;padding:12px 0}
+.collapsed .sidebar-bottom{padding-left:0;padding-right:0}
+.collapsed .logout{font-size:0}
+.collapsed .logout::after{content:"↪";font-size:15px}
+
+/* MODAL UMUM */
+.modal-backdrop{position:fixed;inset:0;background:rgba(20,34,50,.42);display:none;align-items:center;justify-content:center;padding:20px;z-index:30}
+.modal-backdrop.top{z-index:45}
+.modal-backdrop.show{display:flex}
+@keyframes popupIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* POPUP ALASAN PENDING / CANCEL */
+.reason-modal{width:min(100%,540px);background:#fff;border:1px solid #e6edf4;border-radius:17px;box-shadow:0 22px 70px #10233b30;padding:28px;animation:popupIn .18s ease-out}
+.modal-title-row{display:flex;align-items:center;gap:15px;margin-bottom:27px}
+.modal-icon{width:44px;height:44px;border-radius:9px;display:grid;place-items:center;font-size:24px;flex-shrink:0}
+.modal-icon.pending{background:#fff3cc}
+.modal-icon.cancel{background:#ffeded}
+.modal-title{font-size:23px;font-weight:750;margin:0}
+.reason-job{display:flex;align-items:center;gap:13px;margin-bottom:25px}
+.reason-gear{width:35px;height:35px;border-radius:8px;background:#e8e8e8;display:grid;place-items:center;font-size:18px;flex-shrink:0}
+.reason-job-name{font-weight:750;font-size:13px;margin-bottom:5px}
+.reason-meta{font-size:12px;color:#718096;line-height:1.6}
+.reason-label{font-size:13px;font-weight:700;color:#4a5b70;margin-bottom:9px}
+.reason-copy{border-radius:11px;padding:14px 15px;font-size:13px;line-height:1.7;border:1px solid}
+.reason-copy.pending{background:#fff7e2;border-color:#ffedbf;color:#9b6713}
+.reason-copy.cancel{background:#fff0ef;border-color:#ffe0dc;color:#d9443e}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:20px}
+.modal-close{border:1px solid #d9e2ec;background:#fff;border-radius:9px;padding:12px 19px;font-weight:650;color:#506176;cursor:pointer;font-family:inherit}
+.modal-close:hover{background:#f7f9fc}
+.reason-action{border:none;border-radius:9px;padding:12px 19px;font-weight:700;font-size:13px;color:#fff;cursor:pointer;font-family:inherit}
+.reason-action[hidden]{display:none}
+.reason-action.run{background:#168454}
+.reason-action.run:hover{background:#12703f}
+.reason-action.reactivate{background:#1479e8}
+.reason-action.reactivate:hover{background:#0f66c4}
+.mobile-overlay{display:none}
+
+/* MODAL TIM / RIWAYAT / STATUS */
+.team-modal,.history-modal,.status-modal{max-height:min(90vh,800px);overflow-y:auto;background:#fff;border:1px solid #e6edf4;border-radius:17px;box-shadow:0 22px 70px #10233b30;padding:25px;animation:popupIn .18s ease-out}
+.team-modal{width:min(100%,620px)}
+.history-modal{width:min(100%,680px)}
+.status-modal{width:min(100%,560px)}
+.team-modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:7px}
+.team-modal-title{margin:0;font-size:21px;font-weight:750}
+.team-modal-subtitle{color:#718096;font-size:12px;line-height:1.6;margin-bottom:20px}
+.team-section-title{font-size:12px;color:#4a5b70;font-weight:750;margin:17px 0 9px}
+.team-member-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #e6edf4;border-radius:10px;padding:10px 12px;margin-bottom:7px}
+.team-member-name{font-size:12px;font-weight:700}
+.team-member-id{font-size:10px;color:#8290a3;margin-top:3px}
+.team-remove-btn{border:1px solid #ffd8d6;background:#fff4f3;color:#c83e39;border-radius:7px;padding:7px 9px;cursor:pointer;font-size:10px;font-weight:700;flex-shrink:0}
+.team-add-row{display:flex;gap:8px;align-items:center}
+.team-add-row select,.status-select{flex:1;min-width:0;height:39px;border:1px solid #dfe7ef;border-radius:8px;padding:0 10px;background:#fff;color:#354356;font:inherit;width:100%}
+.team-add-btn,.team-save-btn{border:none;border-radius:8px;background:#1479e8;color:#fff;padding:10px 13px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
+.team-save-btn.danger{background:#d94b48}
+.team-save-btn:disabled{opacity:.45;cursor:not-allowed}
+.team-note{background:#f4f8fc;border:1px solid #e4edf5;border-radius:9px;color:#718096;font-size:11px;line-height:1.6;padding:10px 12px;margin-top:15px}
+.team-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+.team-cancel-btn{border:1px solid #d9e2ec;background:#fff;color:#506176;border-radius:8px;padding:10px 13px;cursor:pointer;font-size:11px;font-weight:650;font-family:inherit}
+.team-toast{position:fixed;right:22px;bottom:22px;z-index:60;display:none;background:#173b57;color:#fff;border-radius:9px;padding:12px 16px;box-shadow:0 8px 28px #10233b2b;font-size:12px}
+.team-toast.show{display:block}
+
+/* POPUP UBAH STATUS (ikon ✎) */
+.status-current{font-size:11px;color:#8290a3;margin-top:7px}
+.status-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.status-opt{display:flex;align-items:center;gap:10px;border:1.5px solid #e0e7ef;background:#fff;border-radius:11px;padding:13px;cursor:pointer;font:inherit;font-weight:700;font-size:12px;color:#506176;text-align:left}
+.status-opt .oi{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:15px}
+.status-opt[data-val="Pending"] .oi{background:#fff3cc}
+.status-opt[data-val="Cancel"] .oi{background:#ffeded}
+.status-opt[data-val="Pending"].selected{border-color:#f0b84a;background:#fff9ea;color:#9b6713}
+.status-opt[data-val="Cancel"].selected{border-color:#ef8c89;background:#fff3f2;color:#c83e39}
+.status-textarea{width:100%;min-height:96px;resize:vertical;border:1px solid #dfe7ef;border-radius:10px;padding:11px 12px;font:inherit;font-size:12px;line-height:1.6;color:#354356;outline:none}
+.status-textarea:focus,.status-select:focus{border-color:#8fbdf5;box-shadow:0 0 0 3px #e4f0ff}
+.status-error{color:#c83e39;font-size:11px;margin-top:8px;min-height:14px}
+
+/* POPUP PROGRESS (klik bar progress) */
+.pc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:6px}
+.pc-sub{color:#718096;font-size:12px;line-height:1.6;margin:0 0 6px}
+.slider-wrap{position:relative;padding-top:42px;margin-top:6px}
+.slider-bubble{position:absolute;top:0;transform:translateX(-50%);background:#e0e3e8;color:#182433;font-weight:700;font-size:12px;padding:6px 10px;border-radius:8px;min-width:40px;text-align:center;pointer-events:none;white-space:nowrap}
+.slider-bubble::after{content:"";position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);border:6px solid transparent;border-top-color:#e0e3e8;border-bottom:0}
+.progress-range{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;margin:0;cursor:pointer;display:block;--p:11px}
+.progress-range:focus{outline:none}
+.progress-range::-webkit-slider-runnable-track{height:8px;border-radius:99px;background:linear-gradient(to right,#10638b 0,#10638b var(--p),#d9dce0 var(--p),#d9dce0 100%)}
+.progress-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;box-sizing:border-box;width:22px;height:22px;margin-top:-7px;border-radius:50%;background:#10638b;border:3px solid #fff;box-shadow:0 1px 6px #10233b55}
+.progress-range::-moz-range-track{height:8px;border-radius:99px;background:linear-gradient(to right,#10638b 0,#10638b var(--p),#d9dce0 var(--p),#d9dce0 100%)}
+.progress-range::-moz-range-thumb{box-sizing:border-box;width:22px;height:22px;border-radius:50%;background:#10638b;border:3px solid #fff;box-shadow:0 1px 6px #10233b55}
+.progress-range:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px #cfe4f5}
+.progress-range:disabled{opacity:.4;cursor:not-allowed}
+.slider-scale{display:flex;justify-content:space-between;color:#9aa5b3;font-size:10px;margin-top:8px}
+.pc-reason[hidden]{display:none}
+.pc-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:22px}
+.pc-left,.pc-right{display:flex;gap:10px;flex-wrap:wrap}
+.pc-btn{border:1px solid;background:#fff;border-radius:9px;padding:13px 22px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.pc-btn[data-mode="Pending"]{border-color:#f0b84a;color:#b77916}
+.pc-btn[data-mode="Cancel"]{border-color:#ef8c89;color:#c83e39}
+.pc-btn[data-mode="Pending"]:hover,.pc-btn[data-mode="Pending"].selected{background:#fff4d9}
+.pc-btn[data-mode="Cancel"]:hover,.pc-btn[data-mode="Cancel"].selected{background:#ffeded}
+.pc-btn.selected{box-shadow:0 0 0 3px #00000010;font-weight:700}
+.pc-save{border:none;background:#2a5f8f;color:#fff;border-radius:9px;padding:13px 24px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.pc-save:hover{background:#224f78}
+.pc-save:disabled{opacity:.45;cursor:not-allowed}
+
+/* RIWAYAT */
+.history-list{display:grid;gap:10px}
+.history-item{border:1px solid #e5ecf3;border-radius:11px;padding:13px;background:#fff}
+.history-item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
+.history-action{font-weight:750;font-size:12px}
+.history-time{color:#8290a3;font-size:10px;margin-top:4px}
+.history-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.history-field{background:#f7f9fc;border-radius:7px;padding:9px;min-width:0}
+.history-field label{display:block;color:#8290a3;font-size:10px;margin-bottom:4px}
+.history-field strong{display:block;color:#344256;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.history-reason{color:#52657a;font-size:11px;line-height:1.65;margin-top:10px}
+.history-empty{text-align:center;color:#8290a3;border:1px dashed #d7e0ea;border-radius:10px;padding:22px 12px;font-size:12px}
+
+/* DESKTOP: sidebar, header, dan footer tetap di tempat; hanya area konten yang bisa di-scroll */
+@media (min-width:651px){
+    html,body{height:100%;overflow:hidden}
+    .app{height:100vh;height:100dvh;overflow:hidden}
+    .sidebar{height:100%;overflow-y:auto}
+    .main{height:100%;min-height:0;overflow:hidden}
+    .topbar,.footer{flex-shrink:0}
+    .content{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+}
+
+/* RESPONSIVE */
+@media (max-width:1100px){
+    .manual-grid{grid-template-columns:repeat(4,1fr)}
+    .f-material{grid-column:span 2}.f-so{grid-column:span 2}
+    .f-work{grid-column:1/-1}
+    .f-qty{grid-column:span 1}.f-nik{grid-column:span 3}
+}
+@media (max-width:900px){
+    .sidebar{width:180px}
+    .content{padding:22px 18px}
+    .topbar{padding:0 18px}
+    .filters{grid-template-columns:1fr 1.5fr 1fr}
+}
+@media (max-width:650px){
+    .app{display:block}
+    .sidebar{position:fixed;z-index:10;left:0;top:0;bottom:0;width:230px;transform:translateX(-100%);transition:transform .25s;box-shadow:10px 0 30px #001e3320}
+    .mobile-open .sidebar{transform:translateX(0)}
+    .mobile-overlay{position:fixed;inset:0;background:#0b203c66;z-index:9}
+    .mobile-open .mobile-overlay{display:block}
+    .collapsed .sidebar{width:230px}
+    .collapsed .brand-name,.collapsed .nav-label{display:inline}
+    .collapsed .nav a{justify-content:flex-start;padding:11px 12px}
+    .topbar{height:52px}
+    .content{padding:20px 13px}
+    .heading{display:block}
+    .heading h1{font-size:21px}
+    .heading-side{justify-content:flex-start;margin-top:14px}
+    .heading-side .hbtn{flex:1;justify-content:center}
+    .filters{grid-template-columns:1fr;gap:8px}
+    .field{height:41px}
+    .footer{padding:13px;flex-direction:column;gap:6px}
+    .table-footer{align-items:flex-start;flex-direction:column}
+    .crumb{display:none}
+    .manual-card{padding:18px 16px}
+    .manual-grid{grid-template-columns:1fr;gap:12px}
+    .f-material,.f-so,.f-work,.f-qty,.f-nik{grid-column:1/-1}
+    .manual-foot{flex-direction:column;align-items:stretch}
+    .manual-submit{width:100%}
+    .reason-modal{padding:22px}
+    .modal-title{font-size:20px}
+    .team-modal,.history-modal,.status-modal{padding:18px}
+    .team-add-row{align-items:stretch;flex-direction:column}
+    .team-add-btn{width:100%}
+    .team-modal-title{font-size:19px}
+    .history-grid,.status-options{grid-template-columns:1fr}
+    .modal-actions .reason-action,.modal-actions .modal-close{flex:1}
+    .pc-foot{flex-direction:column;align-items:stretch}
+    .pc-left,.pc-right{display:grid;grid-template-columns:1fr 1fr}
+    .pc-right{grid-template-columns:1fr 1fr}
+}
+
+/* ===== REVISI ===== */
+.team-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.carry{display:block;margin-top:5px;font-size:10px;font-weight:600;color:#7a5cc4}
+.field .clear-btn{border:none;background:#eef2f7;color:#6b7b8f;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:11px;flex-shrink:0;padding:0}
+.field .clear-btn:hover{background:#dfe7ef}
+.issue-tag{display:inline-block;padding:4px 9px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap}
+.i-Man{background:#e6efff;color:#2b5fc7}.i-Material{background:#fff0dc;color:#b86a0c}.i-Method{background:#f0e8ff;color:#6a3fc2}
+.i-Machine{background:#e0f5f2;color:#12766b}.i-Environment{background:#e5f6e6;color:#2f7d34}
+.m5{display:flex;flex-wrap:wrap;gap:8px}
+.m5-opt{border:1.5px solid #e0e7ef;background:#fff;border-radius:9px;padding:9px 14px;font:inherit;font-size:12px;font-weight:650;color:#506176;cursor:pointer;transition:.15s}
+.m5-opt:hover{background:#f4f8fc}
+.m5-opt.selected{border-color:#10638b;background:#e8f3f9;color:#10638b;box-shadow:0 0 0 3px #d6e9f3}
+.reason-issue{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.reason-issue .reason-label{margin:0}
+.reason-action:disabled{background:#e3e9f0;color:#8795a6;cursor:not-allowed}
+.hist-filters{display:grid;grid-template-columns:170px minmax(180px,1fr) 150px 170px auto;gap:10px;margin-bottom:15px}
+.hist-sum{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}
+.sum-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 16px;min-width:110px}
+.sum-card span{display:block;font-size:10px;color:#8794a5;text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+.sum-card strong{font-size:20px}
+.reset-btn{height:42px;border:1px solid #dfe7ef;background:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:12px;font-weight:650;color:#506176;cursor:pointer}
+.reset-btn:hover{background:#f7f9fc}
+.reason-cell{max-width:280px;color:#52657a;line-height:1.55;font-size:11px}
+.arrow{color:#9aa5b3;margin:0 4px}
+@media (max-width:900px){.hist-filters{grid-template-columns:1fr 1fr}}
+@media (max-width:650px){.hist-filters{grid-template-columns:1fr}}
+
+/* ===== REVISI ===== */
+.team-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.carry{display:block;margin-top:5px;font-size:10px;font-weight:600;color:#7a5cc4}
+.field .clear-btn{border:none;background:#eef2f7;color:#6b7b8f;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:11px;flex-shrink:0;padding:0}
+.field .clear-btn:hover{background:#dfe7ef}
+.issue-tag{display:inline-block;padding:4px 9px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap}
+.i-Man{background:#e6efff;color:#2b5fc7}.i-Material{background:#fff0dc;color:#b86a0c}.i-Method{background:#f0e8ff;color:#6a3fc2}
+.i-Machine{background:#e0f5f2;color:#12766b}.i-Environment{background:#e5f6e6;color:#2f7d34}
+.m5{display:flex;flex-wrap:wrap;gap:8px}
+.m5-opt{border:1.5px solid #e0e7ef;background:#fff;border-radius:9px;padding:9px 14px;font:inherit;font-size:12px;font-weight:650;color:#506176;cursor:pointer;transition:.15s}
+.m5-opt:hover{background:#f4f8fc}
+.m5-opt.selected{border-color:#10638b;background:#e8f3f9;color:#10638b;box-shadow:0 0 0 3px #d6e9f3}
+.reason-issue{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.reason-issue .reason-label{margin:0}
+.reason-action:disabled{background:#e3e9f0;color:#8795a6;cursor:not-allowed}
+.hist-filters{display:grid;grid-template-columns:170px minmax(180px,1fr) 150px 170px auto;gap:10px;margin-bottom:15px}
+.hist-sum{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}
+.sum-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 16px;min-width:110px}
+.sum-card span{display:block;font-size:10px;color:#8794a5;text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+.sum-card strong{font-size:20px}
+.manual-grid.six{grid-template-columns:repeat(12,1fr)}
+.manual-grid.six .c3{grid-column:span 3}.manual-grid.six .c6{grid-column:span 6}
+@media (max-width:900px){.manual-grid.six .c3{grid-column:span 6}.manual-grid.six .c6{grid-column:1/-1}}
+@media (max-width:650px){.manual-grid.six .c3{grid-column:1/-1}}
+.reset-btn{height:42px;border:1px solid #dfe7ef;background:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:12px;font-weight:650;color:#506176;cursor:pointer}
+.reset-btn:hover{background:#f7f9fc}
+.reason-cell{max-width:280px;color:#52657a;line-height:1.55;font-size:11px}
+.arrow{color:#9aa5b3;margin:0 4px}
+@media (max-width:900px){.hist-filters{grid-template-columns:1fr 1fr}}
+@media (max-width:650px){.hist-filters{grid-template-columns:1fr}}
+
+/* ===== REVISI ===== */
+.team-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.carry{display:block;margin-top:5px;font-size:10px;font-weight:600;color:#7a5cc4}
+.field .clear-btn{border:none;background:#eef2f7;color:#6b7b8f;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:11px;flex-shrink:0;padding:0}
+.field .clear-btn:hover{background:#dfe7ef}
+.issue-tag{display:inline-block;padding:4px 9px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap}
+.i-Man{background:#e6efff;color:#2b5fc7}.i-Material{background:#fff0dc;color:#b86a0c}.i-Method{background:#f0e8ff;color:#6a3fc2}
+.i-Machine{background:#e0f5f2;color:#12766b}.i-Environment{background:#e5f6e6;color:#2f7d34}
+.m5{display:flex;flex-wrap:wrap;gap:8px}
+.m5-opt{border:1.5px solid #e0e7ef;background:#fff;border-radius:9px;padding:9px 14px;font:inherit;font-size:12px;font-weight:650;color:#506176;cursor:pointer;transition:.15s}
+.m5-opt:hover{background:#f4f8fc}
+.m5-opt.selected{border-color:#10638b;background:#e8f3f9;color:#10638b;box-shadow:0 0 0 3px #d6e9f3}
+.reason-issue{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.reason-issue .reason-label{margin:0}
+.reason-action:disabled{background:#e3e9f0;color:#8795a6;cursor:not-allowed}
+.hist-filters{display:grid;grid-template-columns:170px minmax(180px,1fr) 150px 170px auto;gap:10px;margin-bottom:15px}
+.hist-sum{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}
+.sum-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 16px;min-width:110px}
+.sum-card span{display:block;font-size:10px;color:#8794a5;text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+.sum-card strong{font-size:20px}
+.manual-grid.six{grid-template-columns:repeat(12,1fr)}
+.manual-grid.six .c3{grid-column:span 3}.manual-grid.six .c6{grid-column:span 6}
+@media (max-width:900px){.manual-grid.six .c3{grid-column:span 6}.manual-grid.six .c6{grid-column:1/-1}}
+@media (max-width:650px){.manual-grid.six .c3{grid-column:1/-1}}
+.reset-btn{height:42px;border:1px solid #dfe7ef;background:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:12px;font-weight:650;color:#506176;cursor:pointer}
+.reset-btn:hover{background:#f7f9fc}
+.reason-cell{max-width:280px;color:#52657a;line-height:1.55;font-size:11px}
+.arrow{color:#9aa5b3;margin:0 4px}
+@media (max-width:900px){.hist-filters{grid-template-columns:1fr 1fr}}
+@media (max-width:650px){.hist-filters{grid-template-columns:1fr}}
+.tgt{font-size:12px}.tgt.ok{color:#168454}.tgt.low{color:#c27a0e}
+.tgt-btn{width:auto;gap:6px;margin:0;padding:0 8px;height:30px;white-space:nowrap}.tgt-edit{color:#9aa5b3;font-size:11px}
+td.desc{min-width:150px;max-width:220px}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+    <aside class="sidebar">
+        <div class="brand"><button class="brand-mark" id="toggleBtn" aria-label="Perkecil atau buka menu" title="Perkecil / buka menu">▦</button><span class="brand-name">Section Viber</span></div>
+        <nav class="nav" aria-label="Menu utama">
+            <a href="dashboard-public.html" class="active" aria-current="page"><span class="ico">▦</span><span class="nav-label">Dashboard</span></a>
+            <a href="riwayat.html"><span class="ico">⟲</span><span class="nav-label">Riwayat</span></a>
+        </nav>
+        <div class="sidebar-bottom"><button class="logout" id="logoutBtn">Log out&nbsp; ↪</button></div>
+    </aside>
+    <div class="mobile-overlay" id="overlay"></div>
+
+    <!-- MODAL RIWAYAT STATUS PER JOB -->
+    <div class="modal-backdrop" id="historyModal" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
+        <section class="history-modal">
+            <div class="team-modal-header"><h2 class="team-modal-title" id="historyModalTitle">Riwayat Status</h2></div>
+            <div class="team-modal-subtitle" id="historyJobInfo"></div>
+            <div class="history-list" id="historyList"></div>
+            <div class="team-modal-actions"><button type="button" class="team-cancel-btn" id="closeHistoryModal">Tutup</button></div>
+        </section>
+    </div>
+    
+    <!-- MODAL PROGRESS (1 bar untuk 1 job / 1 tim) -->
+    <div class="modal-backdrop" id="progressModal" role="dialog" aria-modal="true" aria-labelledby="progressModalTitle">
+        <section class="status-modal">
+            <div class="pc-head">
+                <h2 class="team-modal-title" id="progressModalTitle">Nama pekerjaan</h2>
+                <span class="status s-planning" id="progressBadge">Planning</span>
+            </div>
+            <p class="pc-sub" id="progressJobInfo"></p>
+
+            <div class="slider-wrap">
+                <div class="slider-bubble" id="sliderBubble">0%</div>
+                <input type="range" class="progress-range" id="progressRange" min="0" max="100" step="5" value="0" aria-label="Persentase progress">
+            </div>
+            <div class="slider-scale"><span>0%</span><span>50%</span><span>100%</span></div>
+            <p class="pc-sub" id="targetNote" style="margin-top:12px"></p>
+            <div class="pc-reason" id="shortBox" hidden>
+                <div class="team-section-title">Alasan belum mencapai target</div>
+                <textarea class="status-textarea" id="shortReason" placeholder="Tulis kenapa progress belum mencapai target plan..."></textarea>
+            </div>
+
+            <div class="pc-reason" id="progressReasonBox" hidden>
+                <div class="team-section-title">Jenis masalah</div>
+                <div class="m5" role="group" aria-label="Jenis masalah">
+                    <button type="button" class="m5-opt" data-val="Man">Man</button>
+                    <button type="button" class="m5-opt" data-val="Material">Material</button>
+                    <button type="button" class="m5-opt" data-val="Method">Method</button>
+                    <button type="button" class="m5-opt" data-val="Machine">Machine</button>
+                    <button type="button" class="m5-opt" data-val="Environment">Environment</button>
+                </div>
+                <div class="team-section-title" id="progressReasonLabel">Alasan</div>
+                <textarea class="status-textarea" id="progressReason" aria-labelledby="progressReasonLabel"></textarea>
+            </div>
+            <div class="status-error" id="progressError" role="alert"></div>
+
+            <div class="pc-foot">
+                <div class="pc-left">
+                    <button type="button" class="pc-btn" data-mode="Pending" aria-pressed="false">Pending</button>
+                    <button type="button" class="pc-btn" data-mode="Cancel" aria-pressed="false">Cancel</button>
+                </div>
+                <div class="pc-right">
+                    <button type="button" class="team-cancel-btn" id="closeProgressModal" style="padding:13px 18px;font-size:13px">Batal</button>
+                    <button type="button" class="pc-save" id="saveProgressBtn" disabled>Simpan progress</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="team-toast" id="teamToast" role="status" aria-live="polite"></div>
+
+    <!-- POPUP ALASAN PENDING / CANCEL -->
+    <div class="modal-backdrop" id="reasonModal" role="dialog" aria-modal="true" aria-labelledby="reasonTitle">
+        <section class="reason-modal">
+            <div class="modal-title-row">
+                <div class="modal-icon" id="reasonIcon">⚠️</div>
+                <h2 class="modal-title" id="reasonTitle">Alasan Pending</h2>
+            </div>
+            <div class="reason-job">
+                <div class="reason-gear">⚙</div>
+                <div>
+                    <div class="reason-job-name" id="reasonWork">Nama pekerjaan</div>
+                    <div class="reason-meta"><span id="reasonEmployee"></span><br><span id="reasonTime"></span></div>
+                </div>
+            </div>
+            <div class="reason-issue"><div class="reason-label">Jenis masalah</div><div id="reasonIssue"></div></div>
+            <div class="reason-label">Alasan</div>
+            <div class="reason-copy" id="reasonCopy"></div>
+            <div class="lock-note" id="reasonLockNote" hidden><span>🔒</span><span>Pekerjaan yang di-pending atau di-cancel hanya dapat diaktifkan kembali oleh Leader.</span></div>
+            <div class="modal-actions">
+                <button class="modal-close" id="closeReason">Kembali</button>
+                <button class="reason-action reactivate" id="reactivateBtn" type="button" disabled title="Hanya Leader yang dapat mengaktifkan kembali">↻ Aktifkan kembali (khusus Leader)</button>
+            </div>
+        </section>
+    </div>
+
+    <main class="main">
+        <header class="topbar"><span class="crumb">Public / <strong>Dashboard</strong></span></header>
+
+        <section class="content">
+            <div class="heading">
+                <div>
+                    <h1>Dashboard</h1>
+                    <p>Pantau pekerjaan, progress tim, dan karyawan yang bertanggung jawab.</p>
+                </div>
+                <div class="heading-side">
+                    
+                    <div class="date-note">◷ &nbsp; Data pekerjaan harian</div>
+                </div>
+            </div>
+
+            <!-- FORM TAMBAH JOB MANUAL -->
+            <section class="manual-card" aria-labelledby="manualTitle">
+                <h2 class="manual-title" id="manualTitle">Tambah job manual</h2>
+                <form id="manualForm" novalidate autocomplete="off">
+                    <div class="manual-grid six">
+                        <div class="m-field c3"><label for="mProd">Prod. Order <span style="color:#c83e39">*</span></label><div class="nik-row"><input id="mProd" placeholder="400155497 / MAN_0001"><button type="button" class="nik-add" id="manProdBtn" style="width:auto;padding:0 11px;font-size:11px" title="Pekerjaan tanpa picklist: isi otomatis MAN_0001, MAN_0002, ...">MAN</button></div></div>
+                        <div class="m-field c3"><label for="mMaterial">No. Material (opsional)</label><input id="mMaterial" placeholder="181020601"></div>
+                        <div class="m-field c3"><label for="mSo">No. SO (opsional)</label><input id="mSo" placeholder="BB30064-26"></div>
+                        <div class="m-field c3"><label for="mQty">Qty</label><input id="mQty" type="number" min="1" value="1" inputmode="numeric"></div>
+                        <div class="m-field c6"><label for="mWork">Pekerjaan</label><input id="mWork" placeholder="Contoh: Setting cowl depan R25"></div>
+                        <div class="m-field c6">
+                            <label for="mNik">NIK</label>
+                            <div class="nik-row">
+                                <input id="mNik" list="nikList" placeholder="WN0007">
+                                <button type="button" class="nik-add" id="addNikBtn" title="Tambah karyawan lain" aria-label="Tambahkan NIK ke daftar">＋</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nik-chips" id="nikChips" aria-label="Karyawan yang akan ditugaskan"></div>
+                    <div class="manual-foot">
+                        <div class="manual-msg">
+                            <div class="m-hint">Prod. Order wajib diisi dan menjadi kunci unik. Pekerjaan tanpa picklist memakai MAN_0001 (tekan tombol MAN). No. Material, No. SO, dan NIK boleh dikosongkan. Untuk lebih dari 1 karyawan, tekan Enter atau tombol ＋ setelah mengisi tiap NIK.</div>
+                            <div class="status-error" id="manualError" role="alert"></div>
+                        </div>
+                        <button type="submit" class="manual-submit">Tambah ke daftar</button>
+                    </div>
+                </form>
+                <datalist id="nikList"></datalist>
+            </section>
+
+            <!-- FILTER -->
+            <div class="filters">
+                <label class="field">
+                    <span>▦</span>
+                    <input id="dateFilter" type="date" aria-label="Filter tanggal">
+                    <button type="button" class="clear-btn" id="clearDate" title="Hapus filter tanggal" aria-label="Hapus filter tanggal">✕</button>
+                </label>
+                <label class="field"><span>⌕</span>
+                    <input id="searchInput" type="search" placeholder="Cari prod. order, pekerjaan, atau karyawan..." aria-label="Cari">
+                </label>
+                <label class="field"><span>☷</span>
+                    <select id="statusFilter" aria-label="Filter status">
+                        <option value="all">Semua Status</option>
+                        <option>On progress</option><option>Done</option><option>Planning</option><option>Pending</option><option>Cancel</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="table-card">
+                <div class="table-scroll">
+                    <table>
+                        <thead><tr>
+                            <th>Prod. Order</th><th>No. Material</th><th>Deskripsi Material</th><th>Pekerjaan</th><th>No. SO</th><th>Jumlah</th>
+                            <th>Tim Pengerja</th><th>Progress</th><th>Target Plan</th><th>Status</th><th>Aksi</th>
+                        </tr></thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+                <div class="table-footer"><span id="resultCount">Menampilkan 0 pekerjaan</span></div>
+            </div>
+        </section>
+        <footer class="footer">
+            <span><strong>© 2026 Section Viber</strong> · Portal Internal Section Viber</span>
+            <span>Hak cipta dilindungi undang-undang.</span>
+        </footer>
+    </main>
+</div>
+
+<script src="../assets/picklist-data.js"></script><script src="../assets/sim-data.js"></script><script src="../assets/sync.js"></script>
+<script src="../assets/store.js"></script>
+<script>window.DASH_ROLE = 'Public';</script>
+<script src="../assets/dashboard.js"></script>
+<script src="../assets/auth.js"></script>
+<script src="../assets/mobile-menu.js"></script>
+</body>
+</html>
