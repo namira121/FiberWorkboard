@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<script src="/assets/csrf.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#10638b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<title>Kelola Data - Section Viber</title>
+<link rel="stylesheet" href="/assets/admin.css">
+</head>
+<body data-page="data">
+<div class="app" id="app">
+    <aside class="sidebar">
+        <div class="brand"><button class="brand-mark" id="toggleBtn" aria-label="Perkecil atau buka menu" title="Perkecil / buka menu">▦</button><span class="brand-name">Section Viber</span></div>
+        <nav class="nav" aria-label="Menu utama"><a href="/Leader/dashboard-lead.html"><span class="ico">▦</span><span class="nav-label">Dashboard</span></a><a href="/Admin/sap.html"><span class="ico">⇄</span><span class="nav-label">Integrasi SAP</span></a><a href="/Admin/akun.html"><span class="ico">♚</span><span class="nav-label">Kelola Akun</span></a><a href="/Admin/data.html" class="active" aria-current="page"><span class="ico">▤</span><span class="nav-label">Kelola Data</span></a><a href="/Admin/audit.html"><span class="ico">☷</span><span class="nav-label">Log Aktivitas</span></a></nav>
+        <div class="sidebar-bottom"><button class="logout" id="logoutBtn">Log out&nbsp; ↪</button></div>
+    </aside>
+    <div class="mobile-overlay" id="overlay"></div>
+    <main class="main">
+        <header class="topbar"><span class="crumb">Superadmin / <strong>Kelola Data</strong></span></header>
+        <section class="content">
+            <div class="heading">
+                <div>
+                    <h1>Kelola Data</h1>
+                    <p>Hapus pekerjaan yang salah input atau sudah tidak diperlukan. Setiap penghapusan wajib beralasan dan tercatat di Log Aktivitas. Untuk menghapus picklist, buka Integrasi SAP.</p>
+                </div>
+            </div>
+            <div class="toolbar">
+                <div class="fld grow"><input id="q" type="search" placeholder="Cari Prod. Order, pekerjaan, No. SO, material..." aria-label="Cari pekerjaan"></div>
+                <span class="sub" id="count" style="margin:0;color:#8290a3"></span>
+            </div>
+            <section class="table-card"><div id="tbl"></div></section>
+        </section>
+    </main>
+</div>
+<script src="/assets/auth.js"></script>
+<script src="/assets/mobile-menu.js"></script>
+<script src="/assets/admin.js"></script>
+</body>
+</html>

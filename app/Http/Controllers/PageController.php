@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Menyajikan halaman HTML lama apa adanya dari resources/pages/.
- * Halaman Leader/Public ada di balik middleware auth + role (lihat routes/web.php),
+ * Menyajikan halaman HTML dari resources/pages/.
+ * Halaman Leader/Public/Admin ada di balik middleware auth + role (lihat routes/web.php),
  * makanya TIDAK ditaruh di public/.
  */
 class PageController extends Controller
@@ -25,7 +25,7 @@ class PageController extends Controller
 
     public function leader(string $page)
     {
-        return $this->serve('Leader/' . $page);
+        return $this->serve('Leader/' . $page, true);
     }
 
     public function pub(string $page)
@@ -33,14 +33,32 @@ class PageController extends Controller
         return $this->serve('Public/' . $page);
     }
 
-    private function serve(string $relative)
+    public function admin(string $page)
+    {
+        return $this->serve('Admin/' . $page);
+    }
+
+    /** $adminNav: khusus superadmin, sisipkan menu Admin ke sidebar halaman Leader (pengguna lain tidak menerima skripnya). */
+    private function serve(string $relative, bool $adminNav = false)
     {
         $file = resource_path('pages/' . $relative);
         abort_unless(is_file($file), 404);
 
-        return response()->file($file, [
-            'Content-Type' => 'text/html; charset=UTF-8',
+        $headers = [
+            'Content-Type'  => 'text/html; charset=UTF-8',
             'Cache-Control' => 'no-store',
-        ]);
+        ];
+
+        if ($adminNav && Auth::user()?->role === 'superadmin') {
+            $html = (string) file_get_contents($file);
+            $tag = '<script src="/assets/admin-nav.js" defer></script>';
+            $html = stripos($html, '</body>') !== false
+                ? preg_replace('~</body>~i', $tag . '</body>', $html, 1)
+                : $html . $tag;
+
+            return response($html, 200, $headers);
+        }
+
+        return response()->file($file, $headers);
     }
 }

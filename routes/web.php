@@ -1,9 +1,13 @@
 <?php
 
+use App\Http\Controllers\AdminDataController;
+use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\SapAdminController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkOrderController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,7 +27,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/work-orders/{prod}/hold', [WorkOrderController::class, 'hold']);
     Route::get('/api/logs', [LogController::class, 'index']);
 
-    /* ---- hanya Leader ---- */
+    /* ---- hanya Leader (superadmin otomatis boleh) ---- */
     Route::middleware('role:leader')->group(function () {
         Route::get('/Leader/{page}', [PageController::class, 'leader'])
             ->where('page', '(dashboard-lead|karyawan|riwayat|scanpicklist)\.html');
@@ -39,9 +43,41 @@ Route::middleware('auth')->group(function () {
         Route::delete('/api/work-orders/{prod}/members/{nik}', [WorkOrderController::class, 'removeMember']);
     });
 
-    /* ---- hanya Public ---- */
+    /* ---- hanya Public (superadmin otomatis boleh) ---- */
     Route::middleware('role:public')->group(function () {
         Route::get('/Public/{page}', [PageController::class, 'pub'])
             ->where('page', '(dashboard-public|riwayat)\.html');
+    });
+
+    /* ---- HANYA superadmin ---- */
+    Route::middleware('role:superadmin')->group(function () {
+        Route::get('/Admin/{page}', [PageController::class, 'admin'])
+            ->where('page', '(sap|akun|data|audit)\.html');
+
+        // kelola akun login
+        Route::get('/api/admin/users', [UserController::class, 'index']);
+        Route::post('/api/admin/users', [UserController::class, 'store']);
+        Route::put('/api/admin/users/{id}', [UserController::class, 'update'])->whereNumber('id');
+        Route::post('/api/admin/users/{id}/password', [UserController::class, 'resetPassword'])->whereNumber('id');
+        Route::post('/api/admin/users/{id}/logout', [UserController::class, 'forceLogout'])->whereNumber('id');
+        Route::delete('/api/admin/users/{id}', [UserController::class, 'destroy'])->whereNumber('id');
+
+        // log aktivitas / audit
+        Route::get('/api/admin/audit', [AuditController::class, 'index']);
+
+        // hapus pekerjaan
+        Route::get('/api/admin/work-orders', [AdminDataController::class, 'workOrders']);
+        Route::delete('/api/admin/work-orders/{prod}', [AdminDataController::class, 'destroyWorkOrder']);
+
+        // integrasi SAP
+        Route::get('/api/admin/sap/summary', [SapAdminController::class, 'summary']);
+        Route::get('/api/admin/sap/settings', [SapAdminController::class, 'settings']);
+        Route::put('/api/admin/sap/settings', [SapAdminController::class, 'updateSettings']);
+        Route::post('/api/admin/sap/test', [SapAdminController::class, 'test']);
+        Route::post('/api/admin/sap/sync', [SapAdminController::class, 'sync']);
+        Route::get('/api/admin/sap/syncs', [SapAdminController::class, 'syncs']);
+        Route::get('/api/admin/sap/picklists', [SapAdminController::class, 'picklists']);
+        Route::get('/api/admin/sap/picklists/{id}', [SapAdminController::class, 'picklistShow'])->whereNumber('id');
+        Route::delete('/api/admin/sap/picklists/{id}', [SapAdminController::class, 'picklistDestroy'])->whereNumber('id');
     });
 });
