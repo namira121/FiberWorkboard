@@ -288,6 +288,8 @@ button,input{font:inherit}
                             <button class="btn btn-primary btn-sm" id="startCamera" type="button">◉ Scan picklist</button>
                             <button class="btn btn-sm hidden" id="stopCamera" type="button">Matikan kamera</button>
                             <button class="btn btn-sm hidden" id="zoomBtn" type="button">Zoom 1×</button>
+                            <button class="btn btn-sm" id="photoBtn" type="button">📷 Foto barcode panjang</button>
+                            <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
                         </div>
                         <div id="engineInfo" style="font-size:11px;color:#8a97a6;text-align:center;margin-top:6px"></div>
 
@@ -615,6 +617,48 @@ $('manualFind').addEventListener('click', () => {
 });
 $('manualProd').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('manualFind').click(); } });
 
+/* FOTO BARCODE PANJANG: kamera bawaan HP (fokus & resolusi penuh) jauh lebih tajam daripada stream video. */
+async function decodePhotoFile(file, fast) {
+    const bmp = await createImageBitmap(file);
+    const hints = new Map();
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39]);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    const zx = new ZXing.MultiFormatReader(); zx.setHints(hints);
+    const cv = document.createElement('canvas'), ctx = cv.getContext('2d', { willReadFrequently: true });
+    const found = [];
+    for (const maxW of (fast ? [1800] : [2400, 1600, 1000])) {                       /* beberapa skala: skala pas = barcode terbaca */
+        const k = Math.min(1, maxW / bmp.width);
+        for (const rot of (fast ? [0] : [0, 90, 180, 270])) {                     /* kertas bisa difoto miring/tegak */
+            const w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+            cv.width = rot % 180 ? h : w; cv.height = rot % 180 ? w : h;
+            ctx.save(); ctx.translate(cv.width / 2, cv.height / 2); ctx.rotate(rot * Math.PI / 180);
+            ctx.drawImage(bmp, -w / 2, -h / 2, w, h); ctx.restore();
+            const px = ctx.getImageData(0, 0, cv.width, cv.height).data, lum = new Uint8ClampedArray(cv.width * cv.height);
+            for (let i = 0, j = 0; i < lum.length; i++, j += 4) lum[i] = (px[j] * 299 + px[j + 1] * 587 + px[j + 2] * 114) / 1000;
+            const src = new ZXing.RGBLuminanceSource(lum, cv.width, cv.height);
+            for (const B of [ZXing.HybridBinarizer, ZXing.GlobalHistogramBinarizer]) {
+                try { const t = String(zx.decode(new ZXing.BinaryBitmap(new B(src))).getText()).trim(); if (t && !found.includes(t)) found.push(t); } catch (e) {}
+            }
+            if (found.length) return found;
+        }
+    }
+    return found;
+}
+$('photoBtn').addEventListener('click', () => $('photoInput').click());
+$('photoInput').addEventListener('change', async e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    $('cameraError').textContent = 'Membaca foto…';
+    try {
+        const codes = await decodePhotoFile(f);
+        /* barcode picklist SAP = yang paling panjang (mis. 100030008-000002-0402); yang pendek (0000468559) diabaikan */
+        const code = codes.sort((a, b) => b.length - a.length)[0];
+        if (!code) { $('cameraError').textContent = 'Barcode tidak terbaca di foto. Coba dekatkan, pastikan barcode panjang utuh & tajam.'; return; }
+        $('cameraError').textContent = '';
+        handlePicklistCode(code).then(ok => { if (ok) stopCamera(true); });
+    } catch (err) { $('cameraError').textContent = 'Foto gagal dibaca. Coba lagi.'; }
+});
+
 /* SIMPAN DI DASHBOARD */
 /* TARGET PLAN: bar geser (sama seperti progress). Tidak dicentang = belum diatur. */
 function paintTarget() {
@@ -696,14 +740,14 @@ let engine = null;
 let runId = 0;
 let lastCode = '', lastAt = 0;
 
-const VIDEO = { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } };   /* resolusi tinggi: barcode padat butuh banyak piksel */
+const VIDEO = { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } };   /* resolusi tinggi: barcode padat butuh banyak piksel */
 const SCAN_FORMATS = ['code_128', 'code_39'];   /* format lain dimatikan supaya tidak salah baca */
 
 /* ---- pengaturan sensitivitas (ubah di sini) ---- */
 const CROP_W = 0.7, CROP_H = 0.4;   /* hanya baca area tengah kamera (70% lebar x 40% tinggi) */
 const NEED_READS = 2;               /* kode yang sama harus terbaca berturut-turut sekian kali */
 const STREAK_GAP = 700;             /* ms, jeda maksimal antar pembacaan agar dianggap berturut-turut */
-const COOLDOWN = 1200;              /* ms, jeda minimal antar scan yang diterima */
+const COOLDOWN = 600;               /* ms, jeda minimal antar scan yang diterima */
 let streakCode = '', streakN = 0, streakAt = 0, acceptedAt = 0;
 function resetStreak() { streakCode = ''; streakN = 0; streakAt = 0; acceptedAt = 0; }
 function confirmRead(code) {
@@ -711,7 +755,7 @@ function confirmRead(code) {
     if (now - acceptedAt < COOLDOWN) return false;
     if (code === streakCode && now - streakAt <= STREAK_GAP) streakN++; else { streakCode = code; streakN = 1; }
     streakAt = now;
-    if (streakN < NEED_READS) return false;
+    if (streakN < (mode === 'picklist' ? 1 : NEED_READS)) return false;   /* Code 128 punya checksum: 1x baca sudah aman */
     streakCode = ''; streakN = 0; acceptedAt = now;
     return true;
 }
@@ -856,7 +900,8 @@ async function openEngine(onCode) {
 
     const cv = document.createElement('canvas');
     const ctx = cv.getContext('2d', { willReadFrequently: true });
-    let alive = true, infoSet = false;
+    let alive = true, infoSet = false, lastPhotoAt = 0;
+    const ic = ('ImageCapture' in window) ? new ImageCapture(track) : null;   /* foto resolusi penuh, jauh lebih tajam dari frame video */
 
     function zxDecode(lum, w, h) {
         const src = new ZXing.RGBLuminanceSource(lum, w, h);
@@ -909,9 +954,18 @@ async function openEngine(onCode) {
                         try { code = await decodeRegion(r); } catch (e) {}
                         if (code) { onCode(code); break; }
                     }
+                    /* frame video gagal membaca: ambil foto resolusi penuh tiap ~1.5 dtk lalu decode dengan ZXing */
+                    if (alive && ic && Date.now() - lastPhotoAt > 500 && mode === 'picklist') {
+                        lastPhotoAt = Date.now();
+                        try {
+                            const codes = (await decodePhotoFile(await ic.takePhoto(), true)).filter(c => c.length >= MIN_PICKLIST_LEN);
+                            if (alive && codes.length) onCode(codes.sort((a, b) => b.length - a.length)[0], true);
+                        } catch (e) {}
+                        lastPhotoAt = Date.now();
+                    }
                 }
             } catch (e) {}
-            await new Promise(r => setTimeout(r, 90));
+            await new Promise(r => setTimeout(r, 20));
         }
     })();
     return { stop() { alive = false; stream.getTracks().forEach(t => t.stop()); video.srcObject = null; $('zoomBtn').classList.add('hidden'); $('engineInfo').textContent = ''; } };
@@ -941,9 +995,11 @@ function flash() {
     setTimeout(() => $('cameraBox').classList.remove('found'), 700);
 }
 
-function onCode(code) {
+const MIN_PICKLIST_LEN = 15;   /* barcode picklist SAP panjang (21 karakter); barcode pendek di kertas diabaikan */
+function onCode(code, trusted) {
     if (!mode || !code) return;
-    if (!confirmRead(code)) return;
+    if (mode === 'picklist' && code.length < MIN_PICKLIST_LEN) { setHint('Itu barcode pendek. Arahkan ke barcode yang panjang.'); return; }
+    if (!trusted && !confirmRead(code)) return;
     const now = Date.now();
     if (code === lastCode && now - lastAt < 2500) return;   /* abaikan pembacaan ganda */
     lastCode = code; lastAt = now;
