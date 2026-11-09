@@ -89,17 +89,32 @@
         const head = codeKey(String(code).split('-')[0]);
         return list.find(p => codeKey(p.prod) === head) || list.find(p => q.startsWith(codeKey(p.prod) + '-'));
     }
+    /* Scan picklist TIDAK memanggil SAP: yang diambil hanya nomor Prod. Order dari barcode.
+       Detail (material, SO, deskripsi, proses, qty) diambil nanti lewat tombol "Tampilkan detail" di dashboard
+       supaya scan tetap cepat dan SAP hanya ditanya untuk pekerjaan yang benar-benar dibuka. */
     async function lookupPicklist(code) {
         const c = String(code || '').trim();
         if (!c) return { status: 'notfound' };
+        const known = findPicklist(c);          /* hanya untuk merapikan penulisan kode (angka 0 di depan, dll.) */
+        const prod = known ? known.prod : c;
+        return { status: 'ok', data: { code: c, prod, material: '', so: '', desc: '', qty: '1 pc', work: '', detailLoaded: false } };
+    }
+
+    /* Detail SATU Prod. Order dari SAP (lewat server). Kalau koneksi SAP belum diisi di server (.env),
+       dipakai data contoh di picklist-data.js supaya alur tetap bisa dicoba. */
+    async function fetchDetail(prod) {
         try {
-            const r = await fetch('/api/picklist/' + encodeURIComponent(c), { cache: 'no-store' });
+            const r = await fetch('/api/sap/prod-order/' + encodeURIComponent(prod), { cache: 'no-store', credentials: 'same-origin' });
             const j = await r.json().catch(() => null);
-            if (j && j.ok && j.data) return { status: 'ok', data: j.data };
-            if (j && j.ok === false && r.status === 404) return { status: 'notfound' };
-        } catch (e) { /* server tidak terjangkau, pakai cadangan */ }
-        const p = findPicklist(c);
-        return p ? { status: 'ok', data: p, offline: true } : { status: 'notfound', offline: true };
+            if (j && j.ok && j.data) return { ok: true, data: j.data };
+            if (j && j.code === 'not_configured') {
+                const p = findPicklist(prod);
+                return p ? { ok: true, data: p, sample: true } : { ok: false, error: 'Prod. Order tidak ada di data contoh. Koneksi SAP belum diisi di server.' };
+            }
+            return { ok: false, error: (j && j.error) || `SAP tidak menjawab (HTTP ${r.status}).` };
+        } catch (e) {
+            return { ok: false, error: 'Server tidak terjangkau. Coba lagi.' };
+        }
     }
 
     /* ---------- pekerjaan ---------- */
@@ -142,6 +157,7 @@
     /* judul satu entri riwayat (dipakai popup riwayat di dashboard & halaman Riwayat) */
     function histTitle(e) {
         if (e.kind === 'edit') return 'Data pekerjaan diedit';
+        if (e.kind === 'detail') return 'Detail diambil dari SAP';
         if (e.kind === 'link') return 'Dicocokkan dengan picklist';
         return e.from === e.to ? 'Update progress · ' + e.to : e.from + ' → ' + e.to;
     }
@@ -175,6 +191,8 @@
             team: (data.team || []).map(p => ({ id: p.id, name: p.name })), progress: 0, status: 'Planning',
             target: (data.target == null || isNaN(data.target) || data.target < 0 || data.target > 100) ? null : Number(data.target)
         };
+        /* hasil scan picklist: detail belum diambil dari SAP (tombol "Tampilkan detail" di dashboard) */
+        if (data.detailLoaded === false) { job.detailLoaded = false; job.work = job.work || prod; }
         list.unshift(job);   /* pekerjaan baru tampil paling atas di dashboard */
         if (!saveJobs(list)) return { ok: false, error: 'Gagal menyimpan. Penyimpanan browser tidak tersedia.' };
         pushLog(job, '—', 'Planning', by, role, { reason: 'Pekerjaan ditambahkan.' });
@@ -278,6 +296,19 @@
         });
     }
 
+    /* Isi detail pekerjaan hasil scan dengan data dari SAP (tombol "Tampilkan detail"). */
+    function fillDetail(prod, d, by, role, sample) {
+        return mutate(prod, job => {
+            job.material = d.material || job.material || '';
+            job.so = d.so || job.so || '';
+            job.desc = d.desc || job.desc || '';
+            if (d.qty) job.qty = qtyLabel(String(d.qty));
+            if (d.work && (!job.work || job.work === job.prod)) job.work = d.work;   /* tulisan pekerjaan yang sudah diedit tidak ditimpa */
+            job.detailLoaded = true;
+            pushLog(job, job.status, job.status, by, role, { kind: 'detail', reason: sample ? 'Detail diisi dari data contoh (koneksi SAP belum diisi).' : 'Detail diambil dari SAP.' });
+        });
+    }
+
     /* Opsi 2: edit picklist (hasil scan). Prod. Order pekerjaan diganti nomor dari picklist yang discan. */
     function linkPicklist(prod, pk, by, role) {
         if (role !== 'Leader') return { ok: false, error: 'Hanya Leader yang dapat mencocokkan picklist.' };
@@ -292,6 +323,7 @@
 
         const old = job.prod;
         job.prod = np;
+        if (pk.detailLoaded === false) job.detailLoaded = false;
         job.material = pk.material || job.material;
         job.so = pk.so || job.so;
         job.desc = pk.desc || job.desc;
@@ -322,7 +354,7 @@
         today, nowTime, fmtDate, esc, read, write,
         employees, saveEmployees,
         jobs, saveJobs, findJob, log, logFor, histTitle, visibleOn, carriedFrom, isHeld, statusFromProgress,
-        picklists, findPicklist, lookupPicklist, nextManualProd, setTarget, belowTarget,
+        picklists, findPicklist, lookupPicklist, fetchDetail, fillDetail, nextManualProd, setTarget, belowTarget,
         addJob, setProgress, hold, reactivate, addMember, removeMember, isManual, updateJob, linkPicklist, qtyLabel
     };
 })(window);

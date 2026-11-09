@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class WorkOrder extends Model
 {
@@ -38,10 +37,5 @@ class WorkOrder extends Model
     public function logs(): HasMany
     {
         return $this->hasMany(WorkOrderLog::class);
-    }
-
-    public function picklistItem(): HasOne
-    {
-        return $this->hasOne(PicklistItem::class);
     }
 }

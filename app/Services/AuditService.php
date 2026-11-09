@@ -19,9 +19,11 @@ class AuditService
         'user_delete'          => 'Hapus akun',
         'work_order_delete'    => 'Hapus pekerjaan',
         'picklist_delete'      => 'Hapus picklist',
-        'sap_settings_update'  => 'Ubah pengaturan SAP',
-        'sap_test'             => 'Tes koneksi SAP',
-        'sap_sync'             => 'Sinkron SAP',
+        'sap_detail'           => 'Ambil detail SAP',
+        // log lama (fitur Integrasi SAP yang sudah dihapus), tetap ditampilkan rapi di Log Aktivitas
+        'sap_settings_update'  => 'Ubah pengaturan SAP (lama)',
+        'sap_test'             => 'Tes koneksi SAP (lama)',
+        'sap_sync'             => 'Sinkron SAP (lama)',
     ];
 
     /** Catat satu aktivitas. Kegagalan mencatat tidak boleh mengganggu proses utama. */

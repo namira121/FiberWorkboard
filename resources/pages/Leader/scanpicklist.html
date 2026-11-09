@@ -390,12 +390,12 @@ button,input{font:inherit}
                     <aside class="card steps-card">
                         <h2>Cara pakai</h2>
                         <div class="step"><span class="step-number">1</span><div><strong>Scan picklist</strong><p>Klik "Scan picklist", izinkan kamera, arahkan ke barcode di kiri atas (dekat logo).</p></div></div>
-                        <div class="step"><span class="step-number">2</span><div><strong>Cek data</strong><p>No. SO, Prod. Order, No. Material, dan proses kerja tampil otomatis dari data picklist.</p></div></div>
+                        <div class="step"><span class="step-number">2</span><div><strong>Cek Prod. Order</strong><p>Yang dibaca saat scan hanya nomor Prod. Order, jadi scan cepat. Detail lainnya diambil dari SAP nanti di dashboard.</p></div></div>
                         <div class="step"><span class="step-number">3</span><div><strong>Scan karyawan</strong><p>Klik "Scan barcode karyawan". Scan lagi untuk menambah karyawan lain.</p></div></div>
-                        <div class="step"><span class="step-number">4</span><div><strong>Atur target & simpan</strong><p>Isi target plan (opsional), lalu simpan. Deskripsi material ikut tampil di dashboard.</p></div></div>
+                        <div class="step"><span class="step-number">4</span><div><strong>Atur target & simpan</strong><p>Isi target plan (opsional), lalu simpan. Di dashboard, tekan "Tampilkan detail" untuk melihat material, SO, dan proses kerja.</p></div></div>
                         <div class="step-note">
                             <strong style="color:#455468">Catatan</strong><br>
-                            Kamera hanya jalan di localhost atau HTTPS. Barcode dibaca langsung oleh kamera dan dicocokkan ke data picklist.
+                            Kamera hanya jalan di localhost atau HTTPS. Barcode dibaca langsung oleh kamera; web belum menghubungi SAP saat scan.
                         </div>
                     </aside>
                 </div>
@@ -544,12 +544,13 @@ const dash = v => v || '—';
 
 function showResult(p) {
     currentPicklist = { ...p };
-    $('rSO').textContent = dash(p.so);
+    const pending = p.detailLoaded === false;   /* hasil scan: detail diambil nanti dari dashboard */
+    $('rSO').textContent = pending ? 'Belum dimuat' : dash(p.so);
     $('rProd').textContent = p.prod;
     $('rCode').textContent = `Picklist ${p.code}`;
-    $('rMaterial').textContent = dash(p.material);
-    $('rWork').textContent = dash(p.work);
-    $('rQty').textContent = `Qty ${qtyLabel(p.qty)}`;
+    $('rMaterial').textContent = pending ? 'Belum dimuat' : dash(p.material);
+    $('rWork').textContent = pending ? 'Belum dimuat' : dash(p.work);
+    $('rQty').textContent = pending ? 'Detail diambil dari SAP lewat tombol "Tampilkan detail" di dashboard.' : `Qty ${qtyLabel(p.qty)}`;
 
     assignees = [];
     $('scanNik').value = '';
@@ -661,6 +662,7 @@ $('assignTask').addEventListener('click', () => {
         work: currentPicklist.work,
         so: currentPicklist.so,
         qty: qtyLabel(currentPicklist.qty),
+        detailLoaded: currentPicklist.detailLoaded,
         team, target
     }, 'Leader Section Viber', 'Leader');
     if (!res.ok) { toast(res.error); return; }
@@ -751,19 +753,80 @@ function scanRegions(video) {
     const ox = (vw * k - box.width) / 2, oy = (vh * k - box.height) / 2;
     let t = { x: (fr.left - box.left + ox) / k, y: (fr.top - box.top + oy) / k, w: fr.width / k, h: fr.height / k };
     t = { x: t.x - t.w * 0.05, y: t.y - t.h * 0.2, w: t.w * 1.1, h: t.h * 1.4 };
-    /* bagian tengah kotak (45% dan 70% lebar): garis/teks di kiri-kanan barcode tidak ikut terbaca */
+    /* Barcode SAP panjang (21 karakter), jadi irisan sempit di tengah bisa memotongnya.
+       Urutan: seluruh kotak biru (+ pencari lokasi barcode: dipotong pas di barcode, garis tabel di sisi dibuang),
+       irisan tengah selebar kotak, lalu irisan 70%, lalu area tengah kamera yang lebih luas. */
     const list = [];
-    [0.45, 0.7].forEach(f => {
-        const n = { x: t.x + t.w * (1 - f) / 2, y: t.y, w: t.w * f, h: t.h };
-        list.push(n);
-        list.push({ x: n.x, y: n.y + n.h * 0.25, w: n.w, h: n.h * 0.5 });
-    });
-    list.push(t);
-    list.push({ x: vw * (1 - CROP_W) / 2, y: vh * (1 - CROP_H) / 2, w: vw * CROP_W, h: vh * CROP_H });
+    list.push(Object.assign({ loc: true }, t));
+    list.push({ x: t.x, y: t.y + t.h * 0.25, w: t.w, h: t.h * 0.5 });
+    const n = { x: t.x + t.w * 0.15, y: t.y, w: t.w * 0.7, h: t.h };
+    list.push(n);
+    list.push({ x: n.x, y: n.y + n.h * 0.25, w: n.w, h: n.h * 0.5 });
+    list.push({ loc: true, x: vw * (1 - CROP_W) / 2, y: vh * (1 - CROP_H) / 2, w: vw * CROP_W, h: vh * CROP_H });
     return list.map(r => {
         const x = Math.max(0, Math.round(r.x)), y = Math.max(0, Math.round(r.y));
-        return { x, y, w: Math.max(40, Math.min(vw - x, Math.round(r.w))), h: Math.max(20, Math.min(vh - y, Math.round(r.h))) };
+        return { loc: !!r.loc, x, y, w: Math.max(40, Math.min(vw - x, Math.round(r.w))), h: Math.max(20, Math.min(vh - y, Math.round(r.h))) };
     });
+}
+
+/* ---- pencari lokasi barcode ----
+/* Cari kotak barcode (batang vertikal rapat) di dalam sebuah area. Mengembalikan {x,y,w,h} atau null. */
+function locateBarcode(lum, w, h) {
+    if (w < 80 || h < 20) return null;
+    const STEP = h > 240 ? 2 : 1;
+    const S = new Float32Array(w);
+    for (let y = 1; y < h - 1; y += STEP) {
+        const row = y * w;
+        for (let x = 1; x < w - 1; x++) {
+            const gx = Math.abs(lum[row + x + 1] - lum[row + x - 1]);
+            const gy = Math.abs(lum[row + w + x] - lum[row - w + x]);
+            if (gx > gy) S[x] += gx - gy;
+        }
+    }
+    const r = Math.max(3, Math.round(w * 0.008));
+    const sm = new Float32Array(w);
+    let acc = 0;
+    for (let x = 0; x < w; x++) {
+        acc += S[x];
+        if (x >= 2 * r + 1) acc -= S[x - 2 * r - 1];
+        sm[x] = acc / Math.min(x + 1, 2 * r + 1);
+    }
+    let mx = 0;
+    for (let x = 0; x < w; x++) if (sm[x] > mx) mx = sm[x];
+    if (mx < 1) return null;
+    const thr = mx * 0.3, gapTol = Math.max(8, Math.round(w * 0.025));
+    let best = null, start = -1, last = -1, mass = 0;
+    const close = () => {
+        if (start >= 0 && (!best || mass > best.mass)) best = { x0: start, x1: last, mass };
+    };
+    for (let x = 0; x < w; x++) {
+        if (sm[x] > thr) {
+            if (start < 0) { start = x; mass = 0; }
+            else if (x - last > gapTol) { close(); start = x; mass = 0; }
+            last = x; mass += sm[x];
+        }
+    }
+    close();
+    if (!best || best.x1 - best.x0 < Math.max(60, w * 0.15)) return null;
+
+    const bw = best.x1 - best.x0, mg = Math.max(14, Math.round(bw * 0.045));
+    const x0 = Math.max(0, best.x0 - mg), x1 = Math.min(w, best.x1 + mg);
+
+    const R = new Float32Array(h);
+    for (let y = 0; y < h; y++) {
+        const row = y * w; let s = 0;
+        for (let x = Math.max(1, best.x0); x < Math.min(w - 1, best.x1); x += 2) s += Math.abs(lum[row + x + 1] - lum[row + x - 1]);
+        R[y] = s;
+    }
+    let rmax = 0;
+    for (let y = 0; y < h; y++) if (R[y] > rmax) rmax = R[y];
+    let ya = 0, yb = h - 1;
+    while (ya < h - 1 && R[ya] < rmax * 0.35) ya++;
+    while (yb > ya && R[yb] < rmax * 0.35) yb--;
+    const pad = Math.round((yb - ya) * 0.1) + 2;
+    const y0 = Math.max(0, ya - pad), y1 = Math.min(h, yb + pad + 1);
+    if (y1 - y0 < 12) return null;
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
 /* Chrome/Android: BarcodeDetector bawaan (kalau mendukung Code 128). Selain itu: ZXing. */
@@ -795,20 +858,41 @@ async function openEngine(onCode) {
     const ctx = cv.getContext('2d', { willReadFrequently: true });
     let alive = true, infoSet = false;
 
+    function zxDecode(lum, w, h) {
+        const src = new ZXing.RGBLuminanceSource(lum, w, h);
+        for (const B of [ZXing.HybridBinarizer, ZXing.GlobalHistogramBinarizer]) {
+            try { return String(zx.decode(new ZXing.BinaryBitmap(new B(src))).getText()).trim(); } catch (e) {}
+        }
+        return '';
+    }
+    function lumOf(r) {
+        const px = ctx.getImageData(0, 0, r.w, r.h).data, lum = new Uint8ClampedArray(r.w * r.h);
+        for (let i = 0, j = 0; i < lum.length; i++, j += 4) lum[i] = (px[j] * 299 + px[j + 1] * 587 + px[j + 2] * 114) / 1000;
+        return lum;
+    }
     async function decodeRegion(r) {
         cv.width = r.w; cv.height = r.h;
         ctx.drawImage(video, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
         if (native) {
             const found = await native.detect(cv);
-            return found.length ? String(found[0].rawValue).trim() : '';
+            if (found.length) return String(found[0].rawValue).trim();
+            if (!r.loc) return '';
+            /* gagal: cari lokasi barcode lalu baca potongan yang pas saja */
+            const b = locateBarcode(lumOf(r), r.w, r.h);
+            if (!b) return '';
+            cv.width = b.w; cv.height = b.h;
+            ctx.drawImage(video, r.x + b.x, r.y + b.y, b.w, b.h, 0, 0, b.w, b.h);
+            const again = await native.detect(cv);
+            return again.length ? String(again[0].rawValue).trim() : '';
         }
-        const px = ctx.getImageData(0, 0, r.w, r.h).data, lum = new Uint8ClampedArray(r.w * r.h);
-        for (let i = 0, j = 0; i < lum.length; i++, j += 4) lum[i] = (px[j] * 299 + px[j + 1] * 587 + px[j + 2] * 114) / 1000;
-        const src = new ZXing.RGBLuminanceSource(lum, r.w, r.h);
-        for (const B of [ZXing.HybridBinarizer, ZXing.GlobalHistogramBinarizer]) {
-            try { return String(zx.decode(new ZXing.BinaryBitmap(new B(src))).getText()).trim(); } catch (e) {}
-        }
-        return '';
+        const lum = lumOf(r);
+        const code = zxDecode(lum, r.w, r.h);
+        if (code || !r.loc) return code;
+        const b = locateBarcode(lum, r.w, r.h);
+        if (!b) return '';
+        const part = new Uint8ClampedArray(b.w * b.h);
+        for (let y = 0; y < b.h; y++) part.set(lum.subarray((b.y + y) * r.w + b.x, (b.y + y) * r.w + b.x + b.w), y * b.w);
+        return zxDecode(part, b.w, b.h);
     }
 
     (async () => {
@@ -916,7 +1000,7 @@ async function startCamera(m) {
     $('stopCamera').classList.remove('hidden');
     $('stopCamera').textContent = m === 'employee' ? 'Selesai scan karyawan' : 'Matikan kamera';
     $('placeholderText').textContent = 'Menyalakan kamera…';
-    setHint(m === 'picklist' ? 'Penuhi kotak dengan barcode, hindari bayangan' : 'Arahkan ke barcode karyawan (bisa scan beberapa kali)');
+    setHint(m === 'picklist' ? 'Barcode mendatar & memenuhi kotak, jarak 15–25 cm, hindari bayangan' : 'Arahkan ke barcode karyawan (bisa scan beberapa kali)');
     $('cameraBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
     try {

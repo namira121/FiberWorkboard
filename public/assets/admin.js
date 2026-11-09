@@ -1,4 +1,4 @@
-/* Halaman superadmin: Integrasi SAP, Kelola Akun, Kelola Data, Log Aktivitas.
+/* Halaman superadmin: Kelola Akun, Kelola Data, Log Aktivitas.
    Semua teks dari server dimasukkan lewat textContent (bukan innerHTML), jadi aman dari XSS. */
 (function () {
     'use strict';
@@ -208,280 +208,6 @@
         if (tg) tg.addEventListener('click', function () { $('#app').classList.toggle('collapsed'); });
     }
 
-    /* ================= Integrasi SAP ================= */
-    var MAP = ['picklist_no', 'so_number', 'material_no', 'material_desc', 'prod_order', 'proses'];
-    var MAP_LABEL = {
-        picklist_no: 'Nomor picklist *', so_number: 'No. SO', material_no: 'No. Material',
-        material_desc: 'Deskripsi material', prod_order: 'Prod. Order *', proses: 'Proses'
-    };
-
-    function pageSap() {
-        var cfgBox = $('#cfg');
-        var hasSecret = false;
-
-        function fld(label, input, hint, id) {
-            return h('div', { class: 'fld', id: id ? 'w_' + id : null }, [
-                h('label', { text: label }), input, hint ? h('div', { class: 'hint', text: hint }) : null
-            ]);
-        }
-        function inp(id, type, ph) {
-            return h('input', { id: id, type: type || 'text', placeholder: ph || '', autocomplete: 'off', spellcheck: 'false' });
-        }
-        function sel(id, opts) {
-            return h('select', { id: id }, opts.map(function (o) { return h('option', { value: o[0], text: o[1] }); }));
-        }
-        function chk(id, label) {
-            return h('div', { class: 'fld check' }, h('label', null, [h('input', { id: id, type: 'checkbox' }), label]));
-        }
-
-        /* ---- form pengaturan ---- */
-        var secretInput = h('input', { id: 'f_secret', type: 'password', autocomplete: 'new-password', placeholder: '' });
-        var secretHint = h('div', { class: 'hint' });
-        var clearWrap = h('div', { class: 'hint', id: 'clearWrap' });
-
-        cfgBox.appendChild(h('div', { class: 'form-grid' }, [
-            chk('f_enabled', 'Sinkronisasi otomatis aktif'),
-            fld('Interval sinkron', sel('f_interval', [['5', 'Tiap 5 menit'], ['10', 'Tiap 10 menit'], ['15', 'Tiap 15 menit'], ['30', 'Tiap 30 menit'], ['60', 'Tiap 1 jam'], ['180', 'Tiap 3 jam'], ['720', 'Tiap 12 jam'], ['1440', 'Sehari sekali']]), 'Butuh cron di server (lihat catatan di bawah).')
-        ]));
-
-        cfgBox.appendChild(h('div', { class: 'sec-title', text: 'Alamat & otentikasi' }));
-        cfgBox.appendChild(h('div', { class: 'form-grid' }, [
-            fld('Base URL', inp('f_base_url', 'text', 'https://sap.perusahaan.com:44300'), 'Alamat server API SAP (tanpa path).'),
-            fld('Path endpoint', inp('f_endpoint_path', 'text', '/sap/opu/odata/sap/NAMA_SERVICE/PicklistSet'), 'Bagian setelah Base URL.'),
-            fld('Jenis otentikasi', sel('f_auth_type', [['basic', 'Username + password (Basic)'], ['bearer', 'Token (Bearer)'], ['apikey', 'API key di header'], ['none', 'Tanpa otentikasi']])),
-            fld('Username', inp('f_username'), null, 'username'),
-            fld('Nama header API key', inp('f_api_key_header', 'text', 'X-API-Key'), null, 'api_key_header'),
-            h('div', { class: 'fld', id: 'w_secret' }, [h('label', { id: 'secretLabel', text: 'Password' }), secretInput, secretHint, clearWrap]),
-            fld('Query tambahan', inp('f_extra_query', 'text', 'sap-client=100&$format=json'), 'Opsional. Jangan taruh password/token di sini.'),
-            fld('Timeout (detik)', inp('f_timeout', 'number'), 'Batas waktu menunggu SAP (5-120).')
-        ]));
-        cfgBox.appendChild(h('div', { class: 'form-grid' }, [chk('f_verify', 'Verifikasi sertifikat SSL (disarankan)')]));
-        cfgBox.appendChild(h('div', { class: 'hint', text: 'Matikan verifikasi SSL hanya untuk uji coba dengan sertifikat internal. Lebih baik minta IT memasang sertifikat yang valid.' }));
-
-        cfgBox.appendChild(h('div', { class: 'sec-title', text: 'Membaca respons SAP' }));
-        cfgBox.appendChild(h('div', { class: 'form-grid' }, [
-            fld('Lokasi data', inp('f_data_path', 'text', 'd.results'), 'Letak daftar baris di JSON. OData V2: d.results, OData V4: value, kalau responsnya langsung berupa daftar: kosongkan.')
-        ]));
-        cfgBox.appendChild(h('div', { class: 'sec-title', text: 'Pemetaan kolom (nama field di SAP)' }));
-        cfgBox.appendChild(h('div', { class: 'form-grid' }, MAP.map(function (m) {
-            return fld(MAP_LABEL[m], inp('f_map_' + m, 'text', 'nama field SAP'));
-        })));
-        cfgBox.appendChild(h('div', { class: 'hint', text: 'Tanda * wajib. Tidak tahu nama field-nya? Isi alamat di atas lalu klik "Simpan & tes koneksi": daftar field dari SAP akan ditampilkan.' }));
-
-        var btnSave = h('button', { class: 'btn primary', type: 'button', text: 'Simpan pengaturan' });
-        var btnTest = h('button', { class: 'btn ghost', type: 'button', text: 'Simpan & tes koneksi' });
-        var btnSync = h('button', { class: 'btn ghost', type: 'button', text: 'Simpan & sinkronkan sekarang' });
-        cfgBox.appendChild(h('div', { class: 'actions' }, [btnSave, btnTest, btnSync]));
-
-        function applyAuthUi() {
-            var t = $('#f_auth_type').value;
-            $('#w_username').style.display = t === 'basic' ? '' : 'none';
-            $('#w_api_key_header').style.display = t === 'apikey' ? '' : 'none';
-            $('#w_secret').style.display = t === 'none' ? 'none' : '';
-            $('#secretLabel').textContent = t === 'basic' ? 'Password' : (t === 'bearer' ? 'Token' : 'API key');
-        }
-        $('#f_auth_type').addEventListener('change', applyAuthUi);
-
-        function fill(s) {
-            hasSecret = !!s.has_secret;
-            $('#f_enabled').checked = !!s.enabled;
-            $('#f_interval').value = String(s.sync_interval_minutes);
-            $('#f_base_url').value = s.base_url || '';
-            $('#f_endpoint_path').value = s.endpoint_path || '';
-            $('#f_auth_type').value = s.auth_type;
-            $('#f_username').value = s.username || '';
-            $('#f_api_key_header').value = s.api_key_header || '';
-            $('#f_extra_query').value = s.extra_query || '';
-            $('#f_timeout').value = s.timeout_seconds;
-            $('#f_verify').checked = !!s.verify_ssl;
-            $('#f_data_path').value = s.data_path || '';
-            MAP.forEach(function (m) { $('#f_map_' + m).value = s['map_' + m] || ''; });
-            secretInput.value = '';
-            secretInput.placeholder = hasSecret ? '•••••••• (tersimpan)' : '';
-            secretHint.textContent = hasSecret
-                ? 'Tersimpan terenkripsi. Ketik di sini hanya kalau ingin MENGGANTI.'
-                : 'Belum ada yang tersimpan. Disimpan terenkripsi dan tidak pernah ditampilkan lagi.';
-            clearWrap.textContent = '';
-            if (hasSecret) {
-                clearWrap.appendChild(h('label', null, [h('input', { id: 'f_clear_secret', type: 'checkbox' }), ' Hapus kredensial yang tersimpan']));
-            }
-            applyAuthUi();
-        }
-
-        function collect() {
-            var g = function (id) { return $('#' + id).value.trim(); };
-            var p = {
-                enabled: $('#f_enabled').checked,
-                sync_interval_minutes: parseInt(g('f_interval'), 10),
-                base_url: g('f_base_url'), endpoint_path: g('f_endpoint_path'),
-                auth_type: g('f_auth_type'), username: g('f_username'), api_key_header: g('f_api_key_header'),
-                extra_query: g('f_extra_query'), data_path: g('f_data_path'),
-                timeout_seconds: parseInt(g('f_timeout'), 10) || 30,
-                verify_ssl: $('#f_verify').checked
-            };
-            MAP.forEach(function (m) { p['map_' + m] = g('f_map_' + m); });
-            if (secretInput.value) p.secret = secretInput.value;
-            var cs = $('#f_clear_secret');
-            if (cs && cs.checked) p.clear_secret = true;
-            return p;
-        }
-
-        function save() {
-            return api('/api/admin/sap/settings', 'PUT', collect()).then(function (r) {
-                fill(r.settings);
-                return r;
-            });
-        }
-
-        /* ---- ringkasan ---- */
-        function loadSummary() {
-            return api('/api/admin/sap/summary').then(function (s) {
-                var box = $('#stats');
-                box.textContent = '';
-                var st = !s.configured ? ['Belum diatur', 'gray', 'Isi alamat SAP di bawah'] :
-                    (s.enabled ? ['Aktif', 'ok', 'Sinkron tiap ' + s.interval + ' menit'] : ['Nonaktif', 'warn', 'Sinkron otomatis mati']);
-                box.appendChild(stat('Status koneksi', st[0], st[2], st[1] === 'gray' ? '' : st[1]));
-                box.appendChild(stat('Sinkron terakhir', ago(s.last_sync_at),
-                    s.last_status === 'failed' ? 'Percobaan terakhir gagal: ' + (s.last_message || '') : (s.enabled ? 'Berikutnya: ' + inFuture(s.next_sync_at) : ''),
-                    s.last_status === 'failed' ? 'bad' : ''));
-                box.appendChild(stat('Picklist diterima', s.picklists_total, s.picklists_new + ' berstatus Baru'));
-                box.appendChild(stat('Baris belum diplan', s.items_unplanned, 'dari ' + s.items_total + ' baris'));
-                box.appendChild(stat('Gagal 24 jam terakhir', s.failed_24h, '', s.failed_24h > 0 ? 'bad' : ''));
-            });
-        }
-
-        /* ---- hasil tes ---- */
-        function showResult(res) {
-            var box = $('#testOut');
-            box.textContent = '';
-            box.className = 'card result ' + (res.success ? 'ok' : 'bad');
-            box.appendChild(h('div', { class: 'res-head' }, [badge(res.success ? 'Berhasil' : 'Gagal', res.success ? 'ok' : 'bad'), h('span', { text: res.message || '' })]));
-            var meta = [];
-            if (res.http_status) meta.push('HTTP ' + res.http_status);
-            if (res.rows != null) meta.push(res.rows + ' baris');
-            if (res.picklists != null) meta.push(res.picklists + ' picklist');
-            if (meta.length) box.appendChild(h('div', { class: 'res-meta', text: meta.join(' · ') }));
-            if (res.fields && res.fields.length) {
-                box.appendChild(h('div', { class: 'res-meta', text: 'Field yang ditemukan di baris pertama dari SAP (pakai nama ini di Pemetaan kolom):' }));
-                box.appendChild(h('div', { class: 'chips' }, res.fields.map(function (f) { return h('span', { class: 'chip mono', text: f }); })));
-            }
-            if (res.sample && res.sample.length) {
-                box.appendChild(h('div', { class: 'res-meta', text: 'Contoh hasil pemetaan:' }));
-                box.appendChild(table(MAP.map(function (m) { return { h: MAP_LABEL[m].replace(' *', ''), cell: function (r) { return r[m]; } }; }), res.sample));
-            }
-            box.style.display = '';
-            box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-
-        /* ---- tabel riwayat sinkron ---- */
-        var TRIGGER = { manual: 'Manual', schedule: 'Otomatis', test: 'Tes' };
-        function loadSyncs() {
-            return api('/api/admin/sap/syncs?limit=30').then(function (r) {
-                var host = $('#syncs');
-                host.textContent = '';
-                host.appendChild(table([
-                    { h: 'Waktu', cls: 'nowrap', cell: function (x) { return short(x.at); } },
-                    { h: 'Pemicu', cell: function (x) { return TRIGGER[x.trigger] || x.trigger; } },
-                    { h: 'Oleh', cell: function (x) { return x.by || '-'; } },
-                    { h: 'Status', cell: function (x) { return badge(x.status === 'success' ? 'Berhasil' : 'Gagal', x.status === 'success' ? 'ok' : 'bad'); } },
-                    { h: 'HTTP', cell: function (x) { return x.http || '-'; } },
-                    { h: 'Baris', cell: function (x) { return x.rows; } },
-                    { h: 'Picklist', cell: function (x) { return x.picklists; } },
-                    { h: 'Baru / diubah', cls: 'nowrap', cell: function (x) { return x.trigger === 'test' ? '-' : x.new + ' / ' + x.updated; } },
-                    { h: 'Durasi', cls: 'nowrap', cell: function (x) { return x.ms != null ? (x.ms / 1000).toFixed(1) + ' dtk' : '-'; } },
-                    { h: 'Pesan', cls: 'msg', cell: function (x) { return x.message || '-'; } }
-                ], r.syncs, 'Belum ada sinkronisasi. Klik "Simpan & tes koneksi" di atas untuk mencoba.'));
-            });
-        }
-
-        /* ---- tabel picklist diterima ---- */
-        function loadPicklists() {
-            return api('/api/admin/sap/picklists').then(function (r) {
-                var host = $('#picklists');
-                host.textContent = '';
-                var wrap = h('div');
-                host.appendChild(wrap);
-
-                var rows = r.picklists;
-                var tbody;
-                var t = table([
-                    { h: 'No. picklist', cls: 'nowrap', cell: function (p) { return h('span', { class: 'mono', text: p.picklist_no }); } },
-                    { h: 'Diterima', cls: 'nowrap', cell: function (p) { return short(p.received_at); } },
-                    { h: 'Baris', cell: function (p) { return p.items; } },
-                    { h: 'Sudah diplan', cell: function (p) { return p.planned + ' / ' + p.items; } },
-                    { h: 'Status', cell: function (p) { return badge(p.status, p.status === 'Baru' ? 'blue' : (p.status === 'Selesai' ? 'ok' : 'warn')); } },
-                    {
-                        h: 'Aksi', cls: 'nowrap', cell: function (p) {
-                            return h('div', { class: 'actions', style: 'margin:0' }, [
-                                h('button', { class: 'btn ghost sm', type: 'button', text: 'Lihat baris', onclick: function (e) { toggleDetail(e.target, p); } }),
-                                h('button', { class: 'btn danger sm', type: 'button', text: 'Hapus', onclick: function () { delPicklist(p); } })
-                            ]);
-                        }
-                    }
-                ], rows, 'Belum ada picklist yang diterima dari SAP.');
-                wrap.appendChild(t);
-                tbody = t.querySelector('tbody');
-
-                function toggleDetail(btn, p) {
-                    var tr = btn.closest('tr');
-                    var next = tr.nextSibling;
-                    if (next && next.className === 'detail') { next.parentNode.removeChild(next); btn.textContent = 'Lihat baris'; return; }
-                    btn.textContent = 'Tutup';
-                    var td = h('td', { colspan: 6, text: 'Memuat...' });
-                    var dtr = h('tr', { class: 'detail' }, td);
-                    tr.parentNode.insertBefore(dtr, tr.nextSibling);
-                    api('/api/admin/sap/picklists/' + p.id).then(function (d) {
-                        td.textContent = '';
-                        td.appendChild(table([
-                            { h: 'Prod. Order', cls: 'nowrap', cell: function (i) { return h('span', { class: 'mono', text: i.prod }); } },
-                            { h: 'No. SO', cell: function (i) { return i.so; } },
-                            { h: 'Material', cell: function (i) { return i.material; } },
-                            { h: 'Deskripsi', cell: function (i) { return i.desc; } },
-                            { h: 'Proses', cell: function (i) { return i.proses; } },
-                            { h: 'Pekerjaan', cell: function (i) { return i.job ? badge(i.job.prod + ' · ' + i.job.status, 'blue') : badge('Belum diplan', 'gray'); } }
-                        ], d.items));
-                    }).catch(function (e) { td.textContent = e.message; });
-                }
-
-                function delPicklist(p) {
-                    var extra = p.planned > 0 ? ' ' + p.planned + ' baris sudah dibuat jadi pekerjaan; pekerjaan itu TIDAK ikut terhapus.' : '';
-                    modal({
-                        title: 'Hapus picklist ' + p.picklist_no,
-                        intro: p.items + ' baris akan dihapus.' + extra + ' Kalau SAP masih mengirim picklist ini, ia akan masuk lagi pada sinkron berikutnya.',
-                        fields: [{ name: 'reason', label: 'Alasan (wajib, tercatat di Log Aktivitas)', type: 'textarea', required: true }],
-                        ok: 'Hapus picklist', danger: true
-                    }).then(function (v) {
-                        if (!v) return;
-                        api('/api/admin/sap/picklists/' + p.id, 'DELETE', { reason: v.reason })
-                            .then(function () { toast('Picklist dihapus.'); loadPicklists(); loadSummary(); })
-                            .catch(fail);
-                    });
-                }
-            });
-        }
-
-        function refreshAll() { return Promise.all([loadSummary(), loadSyncs(), loadPicklists()]); }
-
-        btnSave.addEventListener('click', function () {
-            busy(btnSave, function () { return save().then(function () { toast('Pengaturan disimpan.'); return loadSummary(); }); }).catch(fail);
-        });
-        btnTest.addEventListener('click', function () {
-            busy(btnTest, function () {
-                return save().then(function () { return api('/api/admin/sap/test', 'POST', {}); })
-                    .then(function (res) { showResult(res); return refreshAll(); });
-            }).catch(fail);
-        });
-        btnSync.addEventListener('click', function () {
-            busy(btnSync, function () {
-                return save().then(function () { return api('/api/admin/sap/sync', 'POST', {}); })
-                    .then(function (res) { toast(res.message, !res.success); return refreshAll(); });
-            }).catch(fail);
-        });
-
-        api('/api/admin/sap/settings').then(function (r) { fill(r.settings); }).catch(fail);
-        refreshAll().catch(fail);
-    }
-
     /* ================= Kelola Akun ================= */
     function pageAkun() {
         var host = $('#tbl');
@@ -600,7 +326,7 @@
         function del(j) {
             modal({
                 title: 'Hapus pekerjaan ' + j.prod,
-                intro: '"' + j.work + '" (' + j.status + ', ' + j.progress + '%) dihapus permanen beserta daftar timnya. Riwayat status-nya tetap tersimpan. Kalau berasal dari picklist, barisnya jadi "belum diplan" lagi.',
+                intro: '"' + j.work + '" (' + j.status + ', ' + j.progress + '%) dihapus permanen beserta daftar timnya. Riwayat status-nya tetap tersimpan.',
                 fields: [{ name: 'reason', label: 'Alasan (wajib, tercatat di Log Aktivitas)', type: 'textarea', required: true }],
                 ok: 'Hapus pekerjaan', danger: true
             }).then(function (v) {
@@ -664,7 +390,7 @@
                     sb.textContent = '';
                     sb.appendChild(stat('Login hari ini', s.logins_today, s.users_today + ' pengguna berbeda'));
                     sb.appendChild(stat('Login gagal hari ini', s.failed_today, '', s.failed_today > 0 ? 'warn' : ''));
-                    sb.appendChild(stat('Aksi admin hari ini', s.admin_today, 'akun, hapus data, pengaturan SAP'));
+                    sb.appendChild(stat('Aksi admin hari ini', s.admin_today, 'akun dan hapus data'));
                 }
                 rowsAll = rowsAll.concat(r.logs);
                 lastId = rowsAll.length ? rowsAll[rowsAll.length - 1].id : null;
@@ -681,7 +407,7 @@
     function start() {
         initShell();
         var page = document.body.getAttribute('data-page');
-        var fn = { sap: pageSap, akun: pageAkun, data: pageData, audit: pageAudit }[page];
+        var fn = { akun: pageAkun, data: pageData, audit: pageAudit }[page];
         if (fn) fn();
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();

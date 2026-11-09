@@ -6,7 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\PageController;
-use App\Http\Controllers\SapAdminController;
+use App\Http\Controllers\SapController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkOrderController;
 use Illuminate\Support\Facades\Route;
@@ -38,6 +38,9 @@ Route::middleware('auth')->group(function () {
 
         Route::put('/api/work-orders/{prod}', [WorkOrderController::class, 'update']);
         Route::put('/api/work-orders/{prod}/target', [WorkOrderController::class, 'target']);
+        // detail satu Prod. Order dari SAP (tombol "Tampilkan detail" di dashboard)
+        Route::get('/api/sap/prod-order/{prod}', [SapController::class, 'prodOrder'])->middleware('throttle:60,1');
+
         Route::post('/api/work-orders/{prod}/reactivate', [WorkOrderController::class, 'reactivate']);
         Route::post('/api/work-orders/{prod}/members', [WorkOrderController::class, 'addMember']);
         Route::delete('/api/work-orders/{prod}/members/{nik}', [WorkOrderController::class, 'removeMember']);
@@ -52,7 +55,7 @@ Route::middleware('auth')->group(function () {
     /* ---- HANYA superadmin ---- */
     Route::middleware('role:superadmin')->group(function () {
         Route::get('/Admin/{page}', [PageController::class, 'admin'])
-            ->where('page', '(sap|akun|data|audit)\.html');
+            ->where('page', '(akun|data|audit)\.html');
 
         // kelola akun login
         Route::get('/api/admin/users', [UserController::class, 'index']);
@@ -68,16 +71,5 @@ Route::middleware('auth')->group(function () {
         // hapus pekerjaan
         Route::get('/api/admin/work-orders', [AdminDataController::class, 'workOrders']);
         Route::delete('/api/admin/work-orders/{prod}', [AdminDataController::class, 'destroyWorkOrder']);
-
-        // integrasi SAP
-        Route::get('/api/admin/sap/summary', [SapAdminController::class, 'summary']);
-        Route::get('/api/admin/sap/settings', [SapAdminController::class, 'settings']);
-        Route::put('/api/admin/sap/settings', [SapAdminController::class, 'updateSettings']);
-        Route::post('/api/admin/sap/test', [SapAdminController::class, 'test']);
-        Route::post('/api/admin/sap/sync', [SapAdminController::class, 'sync']);
-        Route::get('/api/admin/sap/syncs', [SapAdminController::class, 'syncs']);
-        Route::get('/api/admin/sap/picklists', [SapAdminController::class, 'picklists']);
-        Route::get('/api/admin/sap/picklists/{id}', [SapAdminController::class, 'picklistShow'])->whereNumber('id');
-        Route::delete('/api/admin/sap/picklists/{id}', [SapAdminController::class, 'picklistDestroy'])->whereNumber('id');
     });
 });

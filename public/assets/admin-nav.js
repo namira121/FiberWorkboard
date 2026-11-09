@@ -7,7 +7,6 @@
             var nav = document.querySelector('.nav');
             if (!nav || nav.querySelector('[data-admin]')) return;
             [
-                ['/Admin/sap.html', '⇄', 'Integrasi SAP'],
                 ['/Admin/akun.html', '♚', 'Kelola Akun'],
                 ['/Admin/data.html', '▤', 'Kelola Data'],
                 ['/Admin/audit.html', '☷', 'Log Aktivitas']

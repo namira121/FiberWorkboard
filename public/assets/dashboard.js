@@ -64,8 +64,10 @@
                 <tr>
                     <td><span class="material">${esc(job.prod)}</span></td>
                     <td class="so">${job.material ? esc(job.material) : '<span class="team-empty">—</span>'}</td>
-                    <td class="desc">${job.desc ? esc(job.desc) : '<span class="team-empty">—</span>'}</td>
-                    <td><span class="work">${esc(job.work)}</span>${carry}</td>
+                    <td class="desc">${job.detailLoaded === false && IS_LEADER
+                        ? `<button type="button" class="detail-btn" data-act="detail" data-prod="${esc(job.prod)}" title="Ambil detail pekerjaan dari SAP">Tampilkan detail</button>`
+                        : (job.desc ? esc(job.desc) : '<span class="team-empty">—</span>')}</td>
+                    <td>${job.detailLoaded === false ? '<span class="team-empty">Belum dimuat</span>' : `<span class="work">${esc(job.work)}</span>`}${carry}</td>
                     <td class="so">${job.so ? esc(job.so) : '<span class="team-empty">—</span>'}</td>
                     <td class="qty">${esc(job.qty)}</td>
                     <td class="team-col">${team}</td>
@@ -388,7 +390,24 @@
         if (act === 'target' && IS_LEADER) openTarget(job);
         if (act === 'reason') openReason(job);
         if (act === 'edit' && IS_LEADER) LeaderTools.openEdit(job, () => render());
+        if (act === 'detail' && IS_LEADER) loadDetail(btn, job);
     });
+
+    /* Tombol "Tampilkan detail": tanya SAP untuk SATU Prod. Order ini saja, lalu simpan hasilnya di pekerjaan. */
+    async function loadDetail(btn, job) {
+        btn.disabled = true;
+        btn.textContent = 'Memuat…';
+        const res = await S.fetchDetail(job.prod);
+        if (!res.ok) {
+            toast(res.error);
+            btn.disabled = false;
+            btn.textContent = 'Tampilkan detail';
+            return;
+        }
+        const saved = S.fillDetail(job.prod, res.data, ACTOR, ROLE, !!res.sample);
+        toast(!saved.ok ? saved.error : res.sample ? 'Detail diisi dari data contoh (SAP belum terhubung).' : 'Detail dimuat dari SAP.');
+        render();
+    }
 
     ['input', 'change'].forEach(ev => {
         $('searchInput').addEventListener(ev, render);
