@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\WorkOrder;
+use App\Services\AuditService;
+use App\Services\SapClient;
 use App\Services\WorkOrderService;
 use App\Support\Viber;
 use Illuminate\Http\JsonResponse;
@@ -57,6 +59,8 @@ class WorkOrderController extends Controller
             'qty'      => 'nullable|string|max:30',
             'target'   => 'nullable|integer|between:0,100',
             'team'     => 'nullable|array|max:50',
+            'picklist'     => 'nullable|string|max:50',
+            'detailLoaded' => 'nullable|boolean',
         ]);
 
         return $this->job($this->svc->create($data, $r->user()), 201);
@@ -110,6 +114,36 @@ class WorkOrderController extends Controller
         ]);
 
         return $this->job($this->svc->update($prod, $d, $r->user()));
+    }
+
+    /** POST /api/work-orders/{prod}/detail : tombol "Tampilkan detail" (ambil detail dari SAP, simpan di database). */
+    public function detail(Request $r, string $prod): JsonResponse
+    {
+        if (! app(SapClient::class)->configured()) {
+            return response()->json(['ok' => false, 'code' => 'not_configured', 'error' => 'Koneksi SAP belum diisi di server (.env).'], 503);
+        }
+
+        $w = $this->svc->loadDetail($prod, $r->user(), app(SapClient::class));
+        AuditService::record('sap_detail', "Ambil detail SAP untuk Prod. Order {$w->prod_order}.", $r->user(), 'work_order', $w->prod_order);
+
+        return $this->job($w);
+    }
+
+    /** POST /api/work-orders/{prod}/link : edit picklist (ganti Prod. Order dengan hasil scan picklist). */
+    public function link(Request $r, string $prod): JsonResponse
+    {
+        $d = $this->check($r, [
+            'prod'         => 'required|string|max:50',
+            'picklist'     => 'nullable|string|max:50',
+            'detailLoaded' => 'nullable|boolean',
+            'material'     => 'nullable|string|max:50',
+            'desc'         => 'nullable|string|max:255',
+            'so'           => 'nullable|string|max:50',
+            'qty'          => 'nullable|string|max:30',
+            'work'         => 'nullable|string|max:150',
+        ]);
+
+        return $this->job($this->svc->link($prod, $d, $r->user()));
     }
 
     public function addMember(Request $r, string $prod): JsonResponse

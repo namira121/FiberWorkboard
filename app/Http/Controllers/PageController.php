@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Menyajikan halaman HTML dari resources/pages/.
- * Halaman Leader/Public/Admin ada di balik middleware auth + role (lihat routes/web.php),
- * makanya TIDAK ditaruh di public/.
+ * Menyajikan halaman (view Blade di resources/views/pages).
+ * Halaman Leader/Public/Admin ada di balik middleware auth + role (lihat routes/web.php).
  */
 class PageController extends Controller
 {
@@ -15,50 +15,42 @@ class PageController extends Controller
     {
         $user = Auth::user();
 
-        return redirect($user ? AuthController::HOME[$user->role] : '/Login.html');
+        return redirect($user ? AuthController::HOME[$user->role] : '/login');
     }
 
     public function login()
     {
-        return $this->serve('Login.html');
+        return $this->page('pages.login');
     }
 
     public function leader(string $page)
     {
-        return $this->serve('Leader/' . $page, true);
+        return $this->page('pages.leader.' . $page);
     }
 
     public function pub(string $page)
     {
-        return $this->serve('Public/' . $page);
+        return $this->page('pages.public.' . $page);
     }
 
     public function admin(string $page)
     {
-        return $this->serve('Admin/' . $page);
+        return $this->page('pages.admin.' . $page);
     }
 
-    /** $adminNav: khusus superadmin, sisipkan menu Admin ke sidebar halaman Leader (pengguna lain tidak menerima skripnya). */
-    private function serve(string $relative, bool $adminNav = false)
+    /** Alamat lama (.html) diarahkan ke alamat baru; query string (mis. ?link=...) ikut dibawa. */
+    public function legacy(Request $request, string $to)
     {
-        $file = resource_path('pages/' . $relative);
-        abort_unless(is_file($file), 404);
+        $query = $request->getQueryString();
 
-        $headers = [
-            'Content-Type'  => 'text/html; charset=UTF-8',
-            'Cache-Control' => 'no-store',
-        ];
+        return redirect($to . ($query ? '?' . $query : ''));
+    }
 
-        if ($adminNav && Auth::user()?->role === 'superadmin') {
-            $html = (string) file_get_contents($file);
-            $tag = '<script src="/assets/admin-nav.js" defer></script>';
-            $html = stripos($html, '</body>') !== false
-                ? preg_replace('~</body>~i', $tag . '</body>', $html, 1)
-                : $html . $tag;
+    private function page(string $view)
+    {
+        abort_unless(view()->exists($view), 404);
 
-            return response($html, 200, $headers);
-        }
-
-        return response()->file($file, $headers);
+        // tidak disimpan di cache browser: status login & data selalu dari server
+        return response()->view($view)->header('Cache-Control', 'no-store');
     }
 }

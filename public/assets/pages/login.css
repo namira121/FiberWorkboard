@@ -1,0 +1,11 @@
+        /* Memastikan tidak ada scrollbar pada layar desktop */
+        html, body {
+            height: 100vh;
+            max-height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #F4F6F9;
+        }
+    

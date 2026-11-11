@@ -1,6 +1,6 @@
 /* Sisi browser untuk login sekali: logout, cek sesi saat aplikasi dibuka lagi, daftar service worker (PWA). */
 (function () {
-    var LOGIN = '/Login.html';
+    var LOGIN = '/login';
 
     window.Auth = {
         logout: function () {
@@ -19,7 +19,7 @@
     document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
 
     /* Halaman Public dipakai di TV berjam-jam: minta layar tetap menyala (Screen Wake Lock), diminta ulang kalau tab kembali aktif */
-    if (/^\/Public\//.test(location.pathname) && 'wakeLock' in navigator) {
+    if (/^\/public\//.test(location.pathname) && 'wakeLock' in navigator) {
         var lock = null;
         var acquire = function () {
             navigator.wakeLock.request('screen').then(function (l) {

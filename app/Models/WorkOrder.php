@@ -11,7 +11,7 @@ class WorkOrder extends Model
     protected $fillable = [
         'prod_order', 'job_date', 'material', 'description', 'work', 'so_number',
         'qty', 'progress', 'target', 'status', 'picklist_no', 'issue', 'reason',
-        'hold_by', 'hold_time', 'done_date',
+        'hold_by', 'hold_time', 'done_date', 'detail_loaded',
     ];
 
     protected function casts(): array
@@ -21,6 +21,7 @@ class WorkOrder extends Model
             'done_date' => 'date:Y-m-d',
             'progress'  => 'integer',
             'target'    => 'integer',
+            'detail_loaded' => 'boolean',
         ];
     }
 

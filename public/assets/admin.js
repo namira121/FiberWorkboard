@@ -34,7 +34,7 @@
         }
         return fetch(url, opt).then(function (r) {
             if (r.status === 401) {
-                location.replace('/Login.html');
+                location.replace('/login');
                 throw new Error('Sesi habis. Silakan login lagi.');
             }
             return r.json().catch(function () { return null; }).then(function (j) {

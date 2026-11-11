@@ -99,7 +99,7 @@
                 <button type="button" class="lt-opt" id="ltText"><span class="lt-ico">✎</span><div><b>Edit tulisan</b></div></button>
                 <div class="lt-actions"><button type="button" class="lt-btn" id="ltClose">Tutup</button></div>`;
             q(m.box, '#ltClose').addEventListener('click', m.close);
-            q(m.box, '#ltLink').addEventListener('click', () => { location.href = 'scanpicklist.html?link=' + encodeURIComponent(job.prod); });
+            q(m.box, '#ltLink').addEventListener('click', () => { location.href = '/leader/scan?link=' + encodeURIComponent(job.prod); });
             q(m.box, '#ltText').addEventListener('click', form);
         };
         const form = () => {
@@ -167,7 +167,7 @@
             <div class="lt-info ${held || done ? 'lt-warn' : ''}">Sudah ada di dashboard dengan status <strong>${esc(job.status)}</strong>${held && job.issue ? ' (' + esc(job.issue) + ')' : ''}, progress ${job.progress}%.${held && job.reason ? '<br>Alasan: ' + esc(job.reason) : ''}${done ? '<br>Kalau diaktifkan kembali (repair), progress mulai lagi dari 0%.' : ''}${!held && !done ? '<br>Tidak perlu ditambahkan lagi.' : ''}</div>
             <div class="lt-actions">
                 <button type="button" class="lt-btn" id="ltClose">Tutup</button>
-                ${held || done ? '<button type="button" class="lt-btn main" id="ltAct">Aktifkan kembali</button>' : '<a class="lt-btn main" style="text-decoration:none" href="dashboard-lead.html">Lihat di dashboard</a>'}
+                ${held || done ? '<button type="button" class="lt-btn main" id="ltAct">Aktifkan kembali</button>' : '<a class="lt-btn main" style="text-decoration:none" href="/leader/dashboard">Lihat di dashboard</a>'}
             </div>`);
         q(m.box, '#ltClose').addEventListener('click', m.close);
         const act = q(m.box, '#ltAct');

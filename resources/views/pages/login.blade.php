@@ -1,61 +1,20 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <script src="/assets/csrf.js"></script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#10638b">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="apple-touch-icon" href="/icons/icon-192.png">
-    <title>Login - New Armada</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        navy: {
-                            800: '#0B3B60',
-                            900: '#0B2B4C',
-                            footer: '#082545',
-                        },
-                        brand: {
-                            blue: '#00588A',
-                            red: '#E31B23',
-                            lightBlue: '#EAF3FA',
-                            textMuted: '#6B7280',
-                            border: '#E5E7EB'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        /* Memastikan tidak ada scrollbar pada layar desktop */
-        html, body {
-            height: 100vh;
-            max-height: 100vh;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: 'Inter', sans-serif;
-            background-color: #F4F6F9;
-        }
-    </style>
-</head>
-<body class="flex flex-col justify-between min-h-screen select-none">
+@extends('layouts.bare')
 
+@section('title', 'Login - New Armada')
+
+@push('head')
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="@v('assets/pages/login.js')"></script>
+<link rel="stylesheet" href="@v('assets/pages/login.css')">
+@endpush
+
+@section('body_class', 'flex flex-col justify-between min-h-screen select-none')
+
+@section('content')
+@verbatim
     <!-- Main Content Container (Centered Vertically and Horizontally) -->
     <main class="flex-1 flex flex-col items-center justify-center px-4 py-6">
 
@@ -169,74 +128,10 @@
         </div>
     </footer>
 
-    <!-- JavaScript Logic -->
-    <script>
-        /* Verifikasi NIK & password dilakukan di server (POST /api/login).
-           Kalau benar, server menyimpan token perangkat di cookie -> login cukup sekali per HP.
-           Akun diatur di data/accounts.json (lihat tambah-akun.js). */
+    
+@endverbatim
+@endsection
 
-        const errorBox = document.getElementById('loginError');
-
-        function showError(message) {
-            errorBox.textContent = message;
-            errorBox.classList.remove('hidden');
-        }
-
-        function hideError() {
-            errorBox.classList.add('hidden');
-        }
-
-        document.getElementById('nik').addEventListener('input', hideError);
-        document.getElementById('password').addEventListener('input', hideError);
-
-        // Toggle Show/Hide Password
-        function togglePasswordVisibility() {
-            const passwordInput = document.getElementById('password');
-            const toggleBtn = document.getElementById('togglePassword');
-
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                toggleBtn.textContent = 'Sembunyikan';
-            } else {
-                passwordInput.type = 'password';
-                toggleBtn.textContent = 'Lihat';
-            }
-        }
-
-        // Login Handler
-        function handleLogin() {
-            const nik = document.getElementById('nik').value.trim();
-            const password = document.getElementById('password').value;
-            const submitBtn = document.getElementById('submitBtn');
-            const label = submitBtn.textContent;
-
-            hideError();
-            submitBtn.textContent = 'Memproses...';
-            submitBtn.disabled = true;
-
-            fetch('/api/login', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nik, password })
-            })
-                .then(r => r.json().catch(() => ({ ok: false })))
-                .then(j => {
-                    if (j && j.ok) { window.location.replace(j.redirect); return; }
-                    showError((j && j.error) || 'Login gagal. Silakan coba lagi.');
-                    submitBtn.textContent = label;
-                    submitBtn.disabled = false;
-                })
-                .catch(() => {
-                    showError('Tidak bisa terhubung ke server. Periksa WiFi / jaringan.');
-                    submitBtn.textContent = label;
-                    submitBtn.disabled = false;
-                });
-        }
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
-        }
-    </script>
-</body>
-</html>
+@push('scripts')
+<script src="@v('assets/pages/login-2.js')"></script>
+@endpush

@@ -397,15 +397,14 @@
     async function loadDetail(btn, job) {
         btn.disabled = true;
         btn.textContent = 'Memuat…';
-        const res = await S.fetchDetail(job.prod);
+        const res = await S.loadDetail(job.prod);   /* server bertanya ke SAP lalu menyimpan hasilnya di database */
         if (!res.ok) {
             toast(res.error);
             btn.disabled = false;
             btn.textContent = 'Tampilkan detail';
             return;
         }
-        const saved = S.fillDetail(job.prod, res.data, ACTOR, ROLE, !!res.sample);
-        toast(!saved.ok ? saved.error : res.sample ? 'Detail diisi dari data contoh (SAP belum terhubung).' : 'Detail dimuat dari SAP.');
+        toast('Detail dimuat dari SAP.');
         render();
     }
 

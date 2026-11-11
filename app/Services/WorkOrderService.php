@@ -40,6 +40,9 @@ class WorkOrderService
         if ($w->done_date) {
             $job['doneDate'] = $w->done_date->format('Y-m-d');
         }
+        if ($w->detail_loaded === false) {
+            $job['detailLoaded'] = false;   // hasil scan: detail belum diambil dari SAP
+        }
         if ($w->hold_time) {
             $job['holdTime'] = substr($w->hold_time, 0, 5);
         }
@@ -172,6 +175,8 @@ class WorkOrderService
             'progress'    => 0,
             'status'      => 'Planning',
             'target'      => $data['target'] ?? null,
+            'picklist_no' => trim((string) ($data['picklist'] ?? '')) ?: null,
+            'detail_loaded' => ! (array_key_exists('detailLoaded', $data) && $data['detailLoaded'] === false),
         ]);
         $w->employees()->attach($niks);
 
@@ -380,6 +385,97 @@ class WorkOrderService
 
             $w->fill($f)->save();
             $this->log($w, $w->status, $w->status, $u, ['kind' => 'edit', 'reason' => 'Data pekerjaan diedit. ' . implode('; ', $changes)]);
+
+            return $w->load('employees');
+        });
+    }
+
+    /**
+     * Leader: tombol "Tampilkan detail". Tanya SAP untuk SATU Prod. Order, lalu simpan hasilnya di pekerjaan.
+     * Panggilan ke SAP dilakukan di luar transaksi database supaya tidak mengunci baris saat menunggu SAP.
+     */
+    public function loadDetail(string $prod, User $u, SapClient $sap): WorkOrder
+    {
+        $w = $this->find($prod, false);
+        $d = $sap->prodOrder($w->prod_order);
+
+        return DB::transaction(function () use ($prod, $u, $d) {
+            $w = $this->find($prod);
+
+            if ($d['material'] !== '') {
+                $w->material = $d['material'];
+            }
+            if ($d['desc'] !== '') {
+                $w->description = $d['desc'];
+            }
+            if ($d['so'] !== '') {
+                $w->so_number = $d['so'];
+            }
+            if ($d['qty'] !== '') {
+                $w->qty = $this->qtyLabel($d['qty']);
+            }
+            // tulisan pekerjaan yang sudah diedit Leader tidak ditimpa
+            if ($d['work'] !== '' && ($w->work === '' || $w->work === $w->prod_order)) {
+                $w->work = $d['work'];
+            }
+            $w->detail_loaded = true;
+            $w->save();
+
+            $this->log($w, $w->status, $w->status, $u, ['kind' => 'detail', 'reason' => 'Detail diambil dari SAP.']);
+
+            return $w->load('employees');
+        });
+    }
+
+    /** Leader: "edit picklist" - Prod. Order pekerjaan diganti nomor dari picklist yang baru discan. */
+    public function link(string $prod, array $pk, User $u): WorkOrder
+    {
+        return DB::transaction(function () use ($prod, $pk, $u) {
+            $w = $this->find($prod);
+            $np = trim((string) ($pk['prod'] ?? ''));
+
+            if ($np === '') {
+                throw new BusinessRuleException('Data picklist tidak valid.');
+            }
+            if (mb_strtolower($np) === mb_strtolower($w->prod_order)) {
+                throw new BusinessRuleException('Picklist ini sama dengan Prod. Order pekerjaan ini.');
+            }
+            if (preg_match('/^man/i', $np)) {
+                throw new BusinessRuleException('Prod. Order dari picklist tidak boleh berawalan MAN.');
+            }
+            if ($dup = WorkOrder::where('prod_order', $np)->first()) {
+                throw new BusinessRuleException("Prod. Order {$np} sudah ada di dashboard (status {$dup->status}).");
+            }
+
+            $old = $w->prod_order;
+            $wasManual = (bool) preg_match('/^MAN_\d+$/i', $old);
+            $str = fn (string $k) => trim((string) ($pk[$k] ?? ''));
+
+            $w->prod_order = $np;
+            $w->picklist_no = $str('picklist') ?: null;
+            if (array_key_exists('detailLoaded', $pk) && $pk['detailLoaded'] === false) {
+                $w->detail_loaded = false;
+            }
+            $w->material = $str('material') ?: $w->material;
+            $w->so_number = $str('so') ?: $w->so_number;
+            $w->description = $str('desc') ?: $w->description;
+            if ($str('qty') !== '') {
+                $w->qty = $this->qtyLabel($str('qty'));
+            }
+            if (! $wasManual && $str('work') !== '') {
+                $w->work = $str('work');
+            } elseif ($w->work === '') {
+                $w->work = $str('work') !== '' ? $str('work') : $np;
+            }
+            $w->save();
+
+            // riwayat lama ikut pindah ke Prod. Order yang baru
+            WorkOrderLog::where('work_order_id', $w->id)->update(['prod_order' => $np, 'material' => $w->material, 'so_number' => $w->so_number]);
+
+            $this->log($w, $w->status, $w->status, $u, [
+                'kind'   => 'link',
+                'reason' => "Prod. Order diganti dari {$old} menjadi {$np} (edit picklist " . ($w->picklist_no ?: '-') . ').',
+            ]);
 
             return $w->load('employees');
         });

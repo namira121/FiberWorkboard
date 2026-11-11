@@ -14,9 +14,9 @@ use Illuminate\Support\Str;
 class AuthController extends Controller
 {
     public const HOME = [
-        'leader'     => '/Leader/dashboard-lead.html',
-        'public'     => '/Public/dashboard-public.html',
-        'superadmin' => '/Leader/dashboard-lead.html',
+        'leader'     => '/leader/dashboard',
+        'public'     => '/public/dashboard',
+        'superadmin' => '/leader/dashboard',
     ];
 
     public function login(Request $request): JsonResponse
