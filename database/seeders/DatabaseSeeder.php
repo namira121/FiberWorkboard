@@ -8,6 +8,8 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Akun dibuat manual lewat `php artisan tinker` (jangan simpan password di file ini).
+        $this->call([
+            SectionFiberSeeder::class,
+        ]);
     }
 }
