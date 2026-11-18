@@ -6,8 +6,6 @@
 @push('head')
 <link rel="stylesheet" href="@v('assets/pages/leader-scan.css')">
 <script src="@v('assets/vendor/zxing.min.js')"></script>
-<script src="@v('assets/picklist-data.js')"></script>
-<script src="@v('assets/sim-data.js')"></script>
 <script src="@v('assets/store.js')"></script>
 <script src="@v('assets/leader-tools.js')"></script>
 @endpush
@@ -19,9 +17,11 @@
 @endsection
 
 @section('topbar')
-@verbatim
-<span class="crumb">Leader / <a href="/leader/dashboard">Dashboard</a> / <strong>Scan picklist</strong></span>
-@endverbatim
+@include('partials.breadcrumb', [
+    'title' => 'Scan picklist',
+    'parent' => 'Dashboard',
+    'parentPage' => 'dashboard',
+])
 @endsection
 
 @section('content')

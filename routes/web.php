@@ -55,6 +55,7 @@ Route::middleware('auth')->group(function () {
 
         Route::put('/api/work-orders/{prod}', [WorkOrderController::class, 'update']);
         Route::put('/api/work-orders/{prod}/target', [WorkOrderController::class, 'target']);
+        Route::post('/api/export/plan', [WorkOrderController::class, 'exportPlan']);
         // detail satu Prod. Order dari SAP (tombol "Tampilkan detail" di dashboard)
         Route::get('/api/sap/prod-order/{prod}', [SapController::class, 'prodOrder'])->middleware('throttle:60,1');
 
@@ -74,7 +75,7 @@ Route::middleware('auth')->group(function () {
     /* ---- HANYA superadmin ---- */
     Route::middleware('role:superadmin')->group(function () {
         Route::get('/admin/{page}', [PageController::class, 'admin'])
-            ->where('page', 'akun|data|audit');
+            ->where('page', 'dashboard|riwayat|karyawan|scan|akun|data|audit');
 
         // kelola akun login
         Route::get('/api/admin/users', [UserController::class, 'index']);

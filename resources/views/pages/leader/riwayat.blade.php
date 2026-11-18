@@ -22,9 +22,7 @@
 @endsection
 
 @section('topbar')
-@verbatim
-<span class="crumb">Leader / <strong>Riwayat</strong></span>
-@endverbatim
+@include('partials.breadcrumb', ['title' => 'Riwayat'])
 @endsection
 
 @section('content')
@@ -59,9 +57,13 @@
                 </label>
                 <button type="button" class="reset-btn" id="resetFilter">Reset</button>
             </div>
+            <p class="history-limit hidden" id="historyLimitNotice" role="status">
+                Menampilkan 2.000 aktivitas terbaru. Data yang lebih lama tidak dimuat pada halaman ini.
+            </p>
 
             <div class="table-card">
-                <div class="table-scroll">
+                <p class="mobile-scroll-hint">Geser tabel ke samping untuk melihat kolom lainnya.</p>
+                <div class="table-scroll" tabindex="0" aria-label="Tabel riwayat pekerjaan, dapat digeser ke samping">
                     <table style="min-width:1400px">
                         <thead><tr>
                             <th>No. SO</th><th>Prod. Order</th><th>No. Material</th><th>Deskripsi Material</th><th>Proses</th><th>Status</th><th>Masalah</th><th>Progress</th><th>Riwayat perubahan status</th><th>Aksi</th>
@@ -81,8 +83,6 @@
 @endsection
 
 @push('scripts')
-<script src="@v('assets/picklist-data.js')"></script>
-<script src="@v('assets/sim-data.js')"></script>
 <script src="@v('assets/store.js')"></script>
 <script src="@v('assets/leader-tools.js')"></script>
 <script src="@v('assets/history.js')"></script>

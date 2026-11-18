@@ -16,5 +16,6 @@ final class AdminValidation
     public const ATTRIBUTES = Viber::ATTRIBUTES + [
         'password' => 'Password', 'role' => 'Role', 'is_active' => 'Status',
         'from' => 'Dari tanggal', 'to' => 'Sampai tanggal', 'q' => 'Kata kunci', 'action' => 'Aksi',
+        'page' => 'Halaman', 'limit' => 'Jumlah baris',
     ];
 }

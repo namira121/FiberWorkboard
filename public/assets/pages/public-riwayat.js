@@ -13,6 +13,17 @@ function issuesOf(j) {
 }
 
 function render() {
+    if (!S.hasLoaded() && S.isLoading()) {
+        $('tableBody').innerHTML = '<tr><td colspan="9" class="empty">Memuat riwayat pekerjaan...</td></tr>';
+        $('resultCount').textContent = 'Memuat data...';
+        return;
+    }
+    if (!S.hasLoaded() && S.error()) {
+        $('tableBody').innerHTML = '<tr><td colspan="9" class="empty">Data belum tersedia. Gunakan tombol Coba lagi di atas.</td></tr>';
+        $('resultCount').textContent = 'Data gagal dimuat';
+        return;
+    }
+
     const all = S.jobs();
     const date = $('dateFilter').value, status = $('statusFilter').value, issue = $('issueFilter').value;
     const q = $('searchInput').value.trim().toLowerCase();
@@ -46,6 +57,7 @@ function render() {
         : '<tr><td colspan="9" class="empty">Belum ada pekerjaan yang sesuai dengan filter.</td></tr>';
 
     $('resultCount').textContent = `Menampilkan ${rows.length} dari ${all.length} pekerjaan`;
+    $('historyLimitNotice').classList.toggle('hidden', !S.isLogTruncated());
 }
 
 $('tableBody').addEventListener('click', e => {
@@ -62,5 +74,6 @@ $('toggleBtn').addEventListener('click', () => { if (window.innerWidth <= 650) a
 $('overlay').addEventListener('click', () => app.classList.remove('mobile-open'));
 $('logoutBtn').addEventListener('click', () => { if (confirm('Apakah kamu yakin ingin logout?')) Auth.logout(); });
 window.addEventListener('storage', e => { if (e.key === S.KEYS.log || e.key === S.KEYS.jobs) render(); });
+window.addEventListener('fiber:store', render);
 window.addEventListener('pageshow', render);
 render();

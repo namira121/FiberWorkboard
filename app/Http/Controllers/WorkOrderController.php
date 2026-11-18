@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\PlanExport;
 use App\Models\WorkOrder;
 use App\Services\AuditService;
 use App\Services\SapClient;
@@ -10,6 +11,8 @@ use App\Support\Viber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class WorkOrderController extends Controller
 {
@@ -101,6 +104,55 @@ class WorkOrderController extends Controller
         $d = $this->check($r, ['value' => 'present|nullable|integer|between:0,100']);
 
         return $this->job($this->svc->setTarget($prod, $d['value'] === null ? null : (int) $d['value']));
+    }
+
+    public function exportPlan(Request $r): BinaryFileResponse
+    {
+        $d = $this->check($r, [
+            'date' => 'nullable|date_format:Y-m-d',
+            'jobs' => 'required|array|min:1|max:500',
+            'jobs.*.prod' => 'required|string|max:50',
+            'jobs.*.so' => 'nullable|string|max:50',
+            'jobs.*.qty' => 'nullable|string|max:30',
+            'jobs.*.work' => 'required|string|max:150',
+            'jobs.*.status' => 'required|string|max:20',
+            'jobs.*.progress' => 'required|integer|between:0,100',
+            'jobs.*.target' => 'nullable|integer|between:0,100',
+            'jobs.*.team' => 'nullable|array|max:50',
+            'jobs.*.team.*.id' => 'nullable|string|max:30',
+            'jobs.*.team.*.name' => 'nullable|string|max:100',
+        ]);
+
+        $date = $d['date'] ?? '';
+        $rows = [];
+        $number = 1;
+
+        foreach ($d['jobs'] as $job) {
+            $team = $job['team'] ?? [];
+            if ($team === []) {
+                $team = [['id' => '', 'name' => '']];
+            }
+
+            foreach ($team as $employee) {
+                $rows[] = [
+                    $number++,
+                    $date !== '' ? $date : '-',
+                    $employee['name'] ?? '-',
+                    $employee['id'] ?? '-',
+                    $job['work'],
+                    $job['prod'],
+                    $job['so'] ?? '-',
+                    $job['qty'] ?? '-',
+                    ($job['target'] ?? null) === null ? '-' : $job['target'] . '%',
+                    $job['progress'] . '%',
+                    $job['status'],
+                ];
+            }
+        }
+
+        $suffix = $date !== '' ? $date : 'semua-tanggal';
+
+        return Excel::download(new PlanExport($rows), "plan-karyawan-{$suffix}.xlsx");
     }
 
     public function update(Request $r, string $prod): JsonResponse

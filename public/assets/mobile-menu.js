@@ -3,6 +3,7 @@
     function init() {
         var app = document.getElementById('app');
         var bar = document.querySelector('.topbar');
+        var sidebar = document.getElementById('appSidebar');
         if (!app || !bar || document.getElementById('menuBtn')) return;
 
         var css = document.createElement('style');
@@ -21,15 +22,50 @@
         btn.id = 'menuBtn';
         btn.className = 'menu-btn';
         btn.setAttribute('aria-label', 'Buka menu');
+        btn.setAttribute('aria-controls', 'appSidebar');
+        btn.setAttribute('aria-expanded', 'false');
         btn.textContent = '☰';
         bar.insertBefore(btn, bar.firstChild);
 
-        function close() { app.classList.remove('mobile-open'); }
-        btn.addEventListener('click', function () { app.classList.toggle('mobile-open'); });
+        function mobile() { return window.innerWidth <= 650; }
+        function sync(open, restoreFocus) {
+            app.classList.toggle('mobile-open', open);
+            btn.setAttribute('aria-expanded', String(open));
+
+            if (mobile() && sidebar) {
+                sidebar.toggleAttribute('inert', !open);
+                sidebar.setAttribute('aria-hidden', String(!open));
+            } else if (sidebar) {
+                sidebar.removeAttribute('inert');
+                sidebar.removeAttribute('aria-hidden');
+            }
+
+            if (restoreFocus && !open) btn.focus();
+        }
+
+        btn.addEventListener('click', function () {
+            var open = !app.classList.contains('mobile-open');
+            sync(open, false);
+            if (open && sidebar) {
+                var first = sidebar.querySelector('.nav a');
+                if (first) first.focus();
+            }
+        });
         var ov = document.getElementById('overlay');
-        if (ov) ov.addEventListener('click', close);
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
-        window.addEventListener('resize', function () { if (window.innerWidth > 650) close(); });
+        if (ov) ov.addEventListener('click', function () { sync(false, true); });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && app.classList.contains('mobile-open')) sync(false, true);
+        });
+        window.addEventListener('resize', function () {
+            sync(app.classList.contains('mobile-open') && mobile(), false);
+        });
+        var brandToggle = document.getElementById('toggleBtn');
+        if (brandToggle) brandToggle.addEventListener('click', function () {
+            requestAnimationFrame(function () {
+                if (mobile()) sync(app.classList.contains('mobile-open'), false);
+            });
+        });
+        sync(false, false);
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

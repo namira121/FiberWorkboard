@@ -1,0 +1,243 @@
+:root {
+    --ui-accent: #10638b;
+    --ui-accent-strong: #0d5578;
+    --ui-ink: #182433;
+    --ui-muted: #5f6f82;
+    --ui-subtle: #52647a;
+    --ui-focus: #0b6fb8;
+    --ui-success: #126b40;
+    --ui-warning: #82580b;
+    --ui-danger: #a8322d;
+}
+
+body {
+    color: var(--ui-ink);
+    font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    font-size: 14px;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--ui-focus);
+    outline-offset: 2px;
+}
+
+.skip-link {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    z-index: 1000;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ui-accent-strong);
+    font-weight: 700;
+    text-decoration: none;
+    transform: translateY(-160%);
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+}
+
+.heading p,
+.crumb,
+.date-note,
+.card-head p,
+.card .sub,
+.form-title-row p,
+.team-modal-subtitle,
+.pc-sub,
+.stat .lbl,
+.stat .sub2,
+.dlg-intro,
+.team-empty,
+.m-hint,
+.help,
+.form-hint,
+.history-time,
+.table-footer {
+    color: var(--ui-muted);
+}
+
+th {
+    color: var(--ui-subtle);
+}
+
+.s-progress {
+    color: #135fae;
+}
+
+.s-done {
+    color: var(--ui-success);
+}
+
+.s-pending {
+    color: var(--ui-warning);
+}
+
+.s-cancel {
+    color: var(--ui-danger);
+}
+
+.status,
+.badge,
+.issue-tag,
+.percent,
+.camera-indicator,
+.slider-scale {
+    font-size: 11px;
+}
+
+.table-scroll {
+    overscroll-behavior-x: contain;
+    scrollbar-color: #9aabba #edf2f7;
+    scrollbar-width: thin;
+}
+
+.table-scroll:focus-visible {
+    outline: 2px solid var(--ui-focus);
+    outline-offset: -2px;
+}
+
+.table-scroll th:first-child,
+.table-scroll td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #fff;
+}
+
+.table-scroll th:first-child {
+    z-index: 3;
+    background: #fbfcfe;
+}
+
+.table-scroll tr:hover td:first-child {
+    background: #fbfdff;
+}
+
+.mobile-scroll-hint {
+    display: none;
+    margin: 0 0 8px;
+    color: var(--ui-muted);
+    font-size: 12px;
+}
+
+.history-limit {
+    margin: 0 0 10px;
+    padding: 9px 12px;
+    border: 1px solid #e3ba72;
+    border-radius: 8px;
+    background: #fff8e8;
+    color: #69480a;
+    font-size: 12px;
+}
+
+.public-manual {
+    padding-top: 16px;
+    padding-bottom: 16px;
+}
+
+.public-manual summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.public-manual summary::-webkit-details-marker {
+    display: none;
+}
+
+.public-manual summary::after {
+    content: "+";
+    float: right;
+    color: var(--ui-muted);
+    font-size: 20px;
+    line-height: 1;
+}
+
+.public-manual[open] summary {
+    margin-bottom: 16px;
+}
+
+.public-manual[open] summary::after {
+    content: "−";
+}
+
+#fiberStoreStatus {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 11px 14px;
+    border: 1px solid #e3ba72;
+    border-radius: 10px;
+    background: #fff8e8;
+    color: #69480a;
+    font-size: 13px;
+}
+
+#fiberStoreStatus.show {
+    display: flex;
+}
+
+#fiberStoreStatus.loading {
+    border-color: #bdd9f1;
+    background: #eef7ff;
+    color: #215b85;
+}
+
+#fiberStoreStatus button {
+    min-height: 34px;
+    padding: 6px 12px;
+    border: 1px solid currentColor;
+    border-radius: 8px;
+    background: #fff;
+    color: inherit;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+@media (max-width: 650px) {
+    input,
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    .mobile-scroll-hint {
+        display: block;
+    }
+
+    .table-scroll {
+        max-width: 100%;
+    }
+
+    .nik-chip button,
+    .assignee button,
+    .field .clear-btn,
+    .status.has-reason {
+        min-width: 28px;
+        min-height: 28px;
+    }
+}
+
+@media (pointer: coarse) {
+    .icon-btn,
+    .brand-mark {
+        min-width: 40px;
+        min-height: 40px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

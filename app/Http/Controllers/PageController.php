@@ -25,6 +25,10 @@ class PageController extends Controller
 
     public function leader(string $page)
     {
+        if (Auth::user()?->role === 'superadmin') {
+            return redirect('/admin/' . $page);
+        }
+
         return $this->page('pages.leader.' . $page);
     }
 
@@ -35,12 +39,22 @@ class PageController extends Controller
 
     public function admin(string $page)
     {
-        return $this->page('pages.admin.' . $page);
+        $workspacePages = ['dashboard', 'riwayat', 'karyawan', 'scan'];
+
+        return $this->page(
+            in_array($page, $workspacePages, true)
+                ? 'pages.leader.' . $page
+                : 'pages.admin.' . $page
+        );
     }
 
     /** Alamat lama (.html) diarahkan ke alamat baru; query string (mis. ?link=...) ikut dibawa. */
     public function legacy(Request $request, string $to)
     {
+        if (str_starts_with($to, '/leader/') && Auth::user()?->role === 'superadmin') {
+            $to = '/admin/' . substr($to, strlen('/leader/'));
+        }
+
         $query = $request->getQueryString();
 
         return redirect($to . ($query ? '?' . $query : ''));

@@ -31,9 +31,14 @@ class LogController extends Controller
             $q->where('prod_order', $d['prod']);
         }
 
+        $limit = (int) ($d['limit'] ?? 1000);
+        $rows = $q->limit($limit + 1)->get();
+        $hasMore = $rows->count() > $limit;
+
         return response()->json([
-            'ok'  => true,
-            'log' => $q->limit((int) ($d['limit'] ?? 1000))->get()->map(fn ($l) => $this->svc->presentLog($l))->values(),
+            'ok'       => true,
+            'has_more' => $hasMore,
+            'log'      => $rows->take($limit)->map(fn ($l) => $this->svc->presentLog($l))->values(),
         ]);
     }
 }

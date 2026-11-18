@@ -5,11 +5,6 @@
 
 @push('head')
 <link rel="stylesheet" href="@v('assets/pages/leader-karyawan.css')">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-<script src="@v('assets/picklist-data.js')"></script>
-<script src="@v('assets/sim-data.js')"></script>
 <script src="@v('assets/store.js')"></script>
 @endpush
 
@@ -91,9 +86,7 @@
 @endsection
 
 @section('topbar')
-@verbatim
-<span class="crumb">Leader / <strong>Karyawan</strong></span>
-@endverbatim
+@include('partials.breadcrumb', ['title' => 'Karyawan'])
 @endsection
 
 @section('content')
@@ -101,8 +94,13 @@
         <section class="content">
 
             <div class="heading">
-                <h1>Karyawan</h1>
-                <p>Kelola data NIK, nama, dan bagian karyawan Section Viber.</p>
+                <div>
+                    <h1>Karyawan</h1>
+                    <p>Kelola data NIK, nama, dan bagian karyawan Section Viber.</p>
+                </div>
+                <div class="heading-actions">
+                    <button class="btn btn-primary" id="addEmployeeBtn" type="button">+ Tambah karyawan</button>
+                </div>
             </div>
 
             <div class="layout">
@@ -125,7 +123,8 @@
                         <button class="btn" id="exportBtn" type="button" title="Export nama, NIK, dan barcode ke Excel (siap print)">⇩ &nbsp;Export barcode</button>
                     </div>
 
-                    <div class="table-scroll">
+                    <p class="mobile-scroll-hint">Geser tabel ke samping jika kolom tidak muat.</p>
+                    <div class="table-scroll" tabindex="0" aria-label="Tabel karyawan, dapat digeser ke samping">
                         <table>
                             <thead>
                                 <tr>
@@ -143,56 +142,56 @@
 
                 </div>
 
-                <!-- FORM TAMBAH / UBAH -->
-                <aside class="card form-card">
-
-                    <div class="form-title-row">
-                        <div class="form-icon" id="formIcon">+</div>
-                        <div>
-                            <h2 id="formTitle">Tambah karyawan</h2>
-                            <p id="formSubtitle">Masukkan data karyawan baru.</p>
+                <dialog class="employee-dialog" id="employeeDialog" aria-labelledby="formTitle">
+                    <div class="employee-dialog-panel">
+                        <div class="employee-dialog-head">
+                            <div class="form-title-row">
+                                <div class="form-icon" id="formIcon">+</div>
+                                <div>
+                                    <h2 id="formTitle">Tambah karyawan</h2>
+                                    <p id="formSubtitle">Masukkan data karyawan baru.</p>
+                                </div>
+                            </div>
+                            <button class="dialog-close" id="closeEmployeeDialog" type="button" aria-label="Tutup form karyawan">&times;</button>
                         </div>
+
+                        <form id="empForm" novalidate>
+                            <div class="form-error" id="formError" role="alert"></div>
+
+                            <div class="form-field" id="fNik">
+                                <label for="nikInput">NIK</label>
+                                <input id="nikInput" placeholder="Contoh: WN0010" autocomplete="off">
+                            </div>
+
+                            <div class="form-field" id="fName">
+                                <label for="nameInput">Nama lengkap</label>
+                                <input id="nameInput" placeholder="Masukkan nama lengkap" autocomplete="off">
+                            </div>
+
+                            <div class="form-field" id="fBagian">
+                                <label for="bagianInput">Bagian</label>
+                                <select id="bagianInput">
+                                    <option value="">Pilih bagian</option>
+                                    <option>Rangka</option>
+                                    <option>Cetak</option>
+                                    <option>Cutting</option>
+                                    <option>Pembenahan</option>
+                                    <option>Setting &amp; Croping</option>
+                                    <option>Finishing</option>
+                                    <option>Master</option>
+                                    <option>Moulding</option>
+                                </select>
+                            </div>
+
+                            <div class="form-hint">Pastikan NIK belum digunakan oleh karyawan lain.</div>
+
+                            <div class="form-buttons">
+                                <button class="btn" type="button" id="cancelEmployeeBtn">Batal</button>
+                                <button class="btn btn-primary" type="submit" id="submitBtn" disabled>Simpan karyawan</button>
+                            </div>
+                        </form>
                     </div>
-
-                    <form id="empForm" novalidate>
-
-                        <div class="form-error" id="formError"></div>
-
-                        <div class="form-field" id="fNik">
-                            <label for="nikInput">NIK</label>
-                            <input id="nikInput" placeholder="Contoh: WN0010" autocomplete="off">
-                        </div>
-
-                        <div class="form-field" id="fName">
-                            <label for="nameInput">Nama lengkap</label>
-                            <input id="nameInput" placeholder="Masukkan nama lengkap" autocomplete="off">
-                        </div>
-
-                        <div class="form-field" id="fBagian">
-                            <label for="bagianInput">Bagian</label>
-                            <select id="bagianInput">
-                                <option value="">Pilih bagian</option>
-                                <option>Rangka</option>
-                                <option>Cetak</option>
-                                <option>Cutting</option>
-                                <option>Pembenahan</option>
-                                <option>Setting &amp; Croping</option>
-                                <option>Finishing</option>
-                                <option>Master</option>
-                                <option>Moulding</option>
-                            </select>
-                        </div>
-
-                        <div class="form-hint">Pastikan NIK belum digunakan oleh karyawan lain.</div>
-
-                        <div class="form-buttons">
-                            <button class="btn" type="button" id="resetBtn">Bersihkan</button>
-                            <button class="btn btn-primary" type="submit" id="submitBtn" disabled>Simpan karyawan</button>
-                        </div>
-
-                    </form>
-
-                </aside>
+                </dialog>
 
             </div>
 

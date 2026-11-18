@@ -258,12 +258,12 @@ $('tgtOn').addEventListener('change', paintTarget);
 $('tgtRange').addEventListener('input', () => { $('tgtOn').checked = true; paintTarget(); });
 paintTarget();
 
-$('assignTask').addEventListener('click', () => {
+$('assignTask').addEventListener('click', async () => {
     if (!currentPicklist) { toast('Scan picklist terlebih dahulu.'); return; }
 
     /* mode cocokkan: ganti MAN_... dengan Prod. Order dari picklist */
     if (LINK_MODE) {
-        const r = Store.linkPicklist(linkJob.prod, currentPicklist, 'Leader Section Viber', 'Leader');
+        const r = await Store.linkPicklist(linkJob.prod, currentPicklist, 'Leader Section Viber', 'Leader');
         if (!r.ok) { toast(r.error); return; }
         stopCamera(true);
         currentPicklist = null;
@@ -282,7 +282,7 @@ $('assignTask').addEventListener('click', () => {
     const target = $('tgtOn').checked ? Number($('tgtRange').value) : null;
 
     const team = assignees.map(p => ({ id: p.nik, name: p.name }));
-    const res = Store.addJob({
+    const res = await Store.addJob({
         prod: currentPicklist.prod,
         material: currentPicklist.material,
         desc: currentPicklist.desc,

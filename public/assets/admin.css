@@ -16,8 +16,13 @@ body{margin:0;background:var(--bg);font-family:Inter,"Segoe UI",Arial,sans-serif
 .nav .ico{width:17px;text-align:center;font-size:14px;flex-shrink:0}
 .sidebar-bottom{margin-top:auto;padding:20px 7px 0}
 .logout{width:100%;border:none;background:#fff;color:#263747;padding:10px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600}
-.collapsed .sidebar{width:64px}
-.collapsed .nav-label,.collapsed .brand-name,.collapsed .logout{display:none}
+.collapsed .sidebar{width:68px;padding-left:10px;padding-right:10px}
+.collapsed .brand{padding-left:5px;padding-right:0}
+.collapsed .nav-label,.collapsed .brand-name{display:none}
+.collapsed .nav a{justify-content:center;padding:12px 0}
+.collapsed .sidebar-bottom{padding-left:0;padding-right:0}
+.collapsed .logout{font-size:0}
+.collapsed .logout::after{content:"↪";font-size:15px}
 
 /* MAIN */
 .main{min-width:0;flex:1;display:flex;flex-direction:column}
@@ -81,6 +86,16 @@ tr.detail td{background:#f8fbff;padding:12px 20px}
 .b-gray{background:#eef1f5;color:#5b6b7e}.b-blue{background:#e7f1ff;color:#1769b2}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .chip{background:#edf5ff;color:#1769b2;border-radius:7px;padding:4px 9px;font-size:11px;font-weight:600}
+.footer{background:#073d65;color:#c5d6e2;display:flex;justify-content:space-between;gap:14px;padding:14px 25px;font-size:10px;flex-shrink:0}
+.footer strong{color:#fff}
+.audit-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--line);background:#fbfcfe;flex-wrap:wrap}
+.page-info{color:#52647a;font-size:12px}
+.page-buttons{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.page{min-width:34px;min-height:34px;padding:6px 10px;border:1px solid #d9e3ee;border-radius:7px;background:#fff;color:#506176;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.page:hover:not(:disabled){border-color:#10638b;color:#10638b}
+.page.active{border-color:#10638b;background:#e8f3f9;color:#10638b}
+.page:disabled{opacity:.45;cursor:not-allowed}
+.page-gap{min-width:24px;text-align:center;color:#8290a3}
 .result{border-left:4px solid var(--line)}.result.ok{border-left-color:var(--ok)}.result.bad{border-left-color:var(--bad)}
 .res-head{display:flex;gap:8px;align-items:flex-start;line-height:1.5;margin-bottom:6px}
 .res-meta{color:var(--muted);font-size:12px;margin-bottom:6px}
@@ -96,12 +111,30 @@ dialog.dlg::backdrop{background:#0b1b2b66}
 .toast{position:fixed;right:20px;bottom:20px;max-width:380px;background:#182433;color:#fff;padding:12px 16px;border-radius:10px;font-size:12px;line-height:1.5;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;z-index:60}
 .toast.show{opacity:1;transform:none}.toast.bad{background:var(--bad)}
 
+/* Log Aktivitas: shell tetap setinggi viewport, hanya konten yang scroll. */
+body[data-page="audit"]{height:100vh;height:100dvh;overflow:hidden}
+body[data-page="audit"] .app{height:100%;min-height:0;overflow:hidden}
+body[data-page="audit"] .sidebar{height:100%;overflow-y:auto;overscroll-behavior:contain}
+body[data-page="audit"] .main{height:100%;min-height:0;overflow:hidden}
+body[data-page="audit"] .topbar,
+body[data-page="audit"] .footer{flex-shrink:0}
+body[data-page="audit"] .content{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+
 /* HP */
 .mobile-overlay{display:none}
+@media (max-width:900px){
+  .sidebar{width:180px}
+}
 @media (max-width:650px){
-  .sidebar{position:fixed;left:-230px;top:0;bottom:0;z-index:20;transition:left .25s;width:208px!important}
+  .sidebar{position:fixed;left:-230px;top:0;bottom:0;z-index:20;transition:left .25s;width:230px!important}
   .mobile-open .sidebar{left:0}
   .mobile-open .mobile-overlay{display:block;position:fixed;inset:0;background:#0b1b2b55;z-index:15}
   .content{padding:18px 14px}.topbar{padding:0 14px}
-  .collapsed .nav-label,.collapsed .brand-name,.collapsed .logout{display:inline}
+  .footer{padding:13px;flex-direction:column;gap:6px}
+  .audit-pagination{align-items:flex-start;flex-direction:column}
+  .collapsed .sidebar{width:230px}
+  .collapsed .nav-label,.collapsed .brand-name{display:inline}
+  .collapsed .nav a{justify-content:flex-start;padding:11px 12px}
+  .collapsed .logout{font-size:12px}
+  .collapsed .logout::after{content:none}
 }

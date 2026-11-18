@@ -34,6 +34,30 @@ function toast(message) {
     toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2400);
 }
 
+/* Library besar dimuat hanya ketika fitur terkait digunakan. */
+const libraries = {};
+function loadScript(name, url) {
+    if (libraries[name]) return libraries[name];
+    libraries[name] = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = url;
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error(`Gagal memuat ${name}.`));
+        document.head.appendChild(script);
+    });
+    return libraries[name];
+}
+const ensureBarcode = () => window.JsBarcode
+    ? Promise.resolve()
+    : loadScript('barcode', 'https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js');
+const ensureExcelImport = () => window.XLSX
+    ? Promise.resolve()
+    : loadScript('xlsx', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+const ensureExcelExport = () => window.ExcelJS
+    ? Promise.resolve()
+    : loadScript('exceljs', 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+
 /* DATA
    Daftar lengkap disimpan di 'sectionViberEmployeeList'.
    Peta NIK -> nama di 'sectionViberEmployees' ikut disinkronkan.
@@ -46,8 +70,8 @@ function loadList() {
 
 /* Disimpan ke database lewat server. Kalau ditolak (mis. NIK sudah ada, atau karyawan masih tercatat di pekerjaan),
    daftar dikembalikan ke data server dan pesan errornya ditampilkan. */
-function saveList(okMessage) {
-    const r = Store.saveEmployees(employees);
+async function saveList(okMessage) {
+    const r = await Store.saveEmployees(employees);
     if (!r.ok) {
         employees = loadList();
         toast(r.error || 'Gagal menyimpan data karyawan.');
@@ -60,9 +84,39 @@ function saveList(okMessage) {
 let employees = loadList();
 let editingNik = null;
 let deleteNik = null;
+let activeModalTrigger = null;
+const employeeDialog = $('employeeDialog');
+
+function openModal(id, focusTarget) {
+    activeModalTrigger = document.activeElement;
+    $('mainContent').inert = true;
+    $('appSidebar').inert = true;
+    $(id).classList.add('show');
+    if (focusTarget) focusTarget.focus();
+}
+
+function closeModal(id) {
+    if (!$(id).classList.contains('show')) return;
+    $(id).classList.remove('show');
+    $('mainContent').inert = false;
+    $('appSidebar').inert = false;
+    if (activeModalTrigger instanceof HTMLElement) activeModalTrigger.focus();
+    activeModalTrigger = null;
+}
 
 /* RENDER TABEL */
 function render() {
+    if (!Store.hasLoaded() && Store.isLoading()) {
+        $('tableBody').innerHTML = '<tr><td colspan="4" class="empty">Memuat data karyawan...</td></tr>';
+        $('resultCount').textContent = 'Memuat data...';
+        return;
+    }
+    if (!Store.hasLoaded() && Store.error()) {
+        $('tableBody').innerHTML = '<tr><td colspan="4" class="empty">Data belum tersedia. Gunakan tombol Coba lagi di atas.</td></tr>';
+        $('resultCount').textContent = 'Data gagal dimuat';
+        return;
+    }
+
     const query = $('searchInput').value.trim().toLowerCase();
 
     const rows = employees.filter(emp =>
@@ -75,13 +129,13 @@ function render() {
                 <td colspan="4" class="empty">
                     ${employees.length
                         ? 'Tidak ada karyawan yang sesuai dengan pencarian.'
-                        : 'Belum ada karyawan. Tambahkan lewat form di samping.'}
+                        : 'Belum ada karyawan. Gunakan tombol Tambah karyawan.'}
                 </td>
             </tr>`;
     } else {
         $('tableBody').innerHTML = rows.map(emp => `
             <tr class="${emp.nik === editingNik ? 'editing' : ''}">
-                <td>
+                <td class="employee-main">
                     <div class="person">
                         <div class="avatar">${esc(initials(emp.name))}</div>
                         <div>
@@ -90,9 +144,9 @@ function render() {
                         </div>
                     </div>
                 </td>
-                <td>${emp.bagian ? `<span class="pill">${esc(emp.bagian)}</span>` : '<span class="sub">Belum diisi</span>'}</td>
-                <td class="center"><svg class="bc" data-nik="${esc(emp.nik)}" style="max-width:170px;height:46px" role="img" aria-label="Barcode ${esc(emp.nik)}"></svg></td>
-                <td>
+                <td class="employee-section">${emp.bagian ? `<span class="pill">${esc(emp.bagian)}</span>` : '<span class="sub">Belum diisi</span>'}</td>
+                <td class="employee-barcode center"><svg class="bc" data-nik="${esc(emp.nik)}" role="img" aria-label="Barcode ${esc(emp.nik)}"></svg></td>
+                <td class="employee-actions">
                     <div class="actions">
                         <button class="btn btn-sm btn-edit" data-edit="${esc(emp.nik)}">✎ Ubah</button>
                         <button class="btn btn-sm btn-del" data-del="${esc(emp.nik)}">Hapus</button>
@@ -107,7 +161,10 @@ function render() {
 
 /* BARCODE (CODE128 dari NIK) */
 function drawBarcodes() {
-    if (typeof JsBarcode === 'undefined') return;
+    if (typeof JsBarcode === 'undefined') {
+        ensureBarcode().then(drawBarcodes).catch(() => {});
+        return;
+    }
     document.querySelectorAll('svg.bc').forEach(el => {
         try { JsBarcode(el, el.dataset.nik, { format: 'CODE128', width: 1.6, height: 40, displayValue: false, margin: 2 }); } catch (e) {}
     });
@@ -115,7 +172,12 @@ function drawBarcodes() {
 
 /* EXPORT EXCEL: kartu 3 kolom (nama, barcode, NIK), A4 fit-to-width, siap print */
 async function exportBarcodes() {
-    if (typeof ExcelJS === 'undefined' || typeof JsBarcode === 'undefined') { toast('Library barcode/Excel belum termuat. Cek koneksi internet lalu muat ulang halaman.'); return; }
+    try {
+        await Promise.all([ensureExcelExport(), ensureBarcode()]);
+    } catch (error) {
+        toast('Library barcode/Excel belum dapat dimuat. Periksa koneksi lalu coba lagi.');
+        return;
+    }
     const list = employees.slice().sort((a, b) => a.name.localeCompare(b.name));
     if (!list.length) { toast('Belum ada karyawan untuk diexport.'); return; }
 
@@ -197,7 +259,16 @@ function updateSubmit() {
 ['nikInput', 'nameInput'].forEach(id => $(id).addEventListener('input', updateSubmit));
 $('bagianInput').addEventListener('change', updateSubmit);
 
-function resetForm() {
+function closeEmployeeDialog() {
+    if (employeeDialog.open) employeeDialog.close();
+}
+
+function openEmployeeDialog(focusTarget) {
+    if (!employeeDialog.open) employeeDialog.showModal();
+    if (focusTarget) focusTarget.focus();
+}
+
+function resetForm(closeAfter = false) {
     editingNik = null;
 
     $('empForm').reset();
@@ -208,9 +279,9 @@ function resetForm() {
     $('formTitle').textContent = 'Tambah karyawan';
     $('formSubtitle').textContent = 'Masukkan data karyawan baru.';
     $('submitBtn').textContent = 'Simpan karyawan';
-    $('resetBtn').textContent = 'Bersihkan';
 
     render();
+    if (closeAfter) closeEmployeeDialog();
 }
 
 function startEdit(nik) {
@@ -228,17 +299,30 @@ function startEdit(nik) {
     $('formTitle').textContent = 'Ubah karyawan';
     $('formSubtitle').textContent = 'Perbarui informasi karyawan terpilih.';
     $('submitBtn').textContent = 'Simpan perubahan';
-    $('resetBtn').textContent = 'Batal';
 
     updateSubmit();
     render();
-    $('nameInput').focus();
+    openEmployeeDialog($('nameInput'));
 }
 
-$('resetBtn').addEventListener('click', resetForm);
+$('addEmployeeBtn').addEventListener('click', () => {
+    resetForm();
+    openEmployeeDialog($('nikInput'));
+});
+$('cancelEmployeeBtn').addEventListener('click', closeEmployeeDialog);
+$('closeEmployeeDialog').addEventListener('click', closeEmployeeDialog);
+employeeDialog.addEventListener('close', () => {
+    if (editingNik) {
+        editingNik = null;
+        render();
+    }
+});
+employeeDialog.addEventListener('click', event => {
+    if (event.target === employeeDialog) closeEmployeeDialog();
+});
 
 /* SIMPAN (CREATE / UPDATE) */
-$('empForm').addEventListener('submit', event => {
+$('empForm').addEventListener('submit', async event => {
     event.preventDefault();
 
     const nik = $('nikInput').value.trim().toUpperCase();
@@ -274,13 +358,11 @@ $('empForm').addEventListener('submit', event => {
         emp.name = name;
         emp.bagian = bagian;
 
-        saveList('Data karyawan diperbarui.');
-        resetForm();
+        if (await saveList('Data karyawan diperbarui.')) resetForm(true);
     } else {
         employees.push({ nik, name, bagian });
 
-        saveList('Karyawan baru ditambahkan.');
-        resetForm();
+        if (await saveList('Karyawan baru ditambahkan.')) resetForm(true);
     }
 });
 
@@ -300,15 +382,14 @@ $('tableBody').addEventListener('click', event => {
         $('deleteText').textContent =
             `${emp.name} (NIK ${emp.nik}) akan dihapus dari daftar karyawan. Tindakan ini tidak dapat dibatalkan.`;
 
-        $('deleteModal').classList.add('show');
-        $('cancelDelete').focus();
+        openModal('deleteModal', $('cancelDelete'));
     }
 });
 
 /* HAPUS (DELETE) */
 function closeDelete() {
     deleteNik = null;
-    $('deleteModal').classList.remove('show');
+    closeModal('deleteModal');
 }
 
 $('cancelDelete').addEventListener('click', closeDelete);
@@ -316,16 +397,16 @@ $('deleteModal').addEventListener('click', event => {
     if (event.target === $('deleteModal')) closeDelete();
 });
 
-$('confirmDelete').addEventListener('click', () => {
+$('confirmDelete').addEventListener('click', async () => {
     if (!deleteNik) return;
 
     const wasEditing = editingNik === deleteNik;
 
     employees = employees.filter(emp => emp.nik !== deleteNik);
-    saveList('Karyawan dihapus.');
+    if (!await saveList('Karyawan dihapus.')) return;
     closeDelete();
 
-    if (wasEditing) resetForm();
+    if (wasEditing) resetForm(true);
     else render();
 });
 
@@ -347,11 +428,11 @@ function resetUpload() {
 
 function openUpload() {
     resetUpload();
-    $('uploadModal').classList.add('show');
+    openModal('uploadModal', $('downloadTemplate'));
 }
 
 function closeUpload() {
-    $('uploadModal').classList.remove('show');
+    closeModal('uploadModal');
 }
 
 $('uploadBtn').addEventListener('click', openUpload);
@@ -368,9 +449,11 @@ document.addEventListener('keydown', event => {
 });
 
 /* DOWNLOAD TEMPLATE */
-$('downloadTemplate').addEventListener('click', () => {
-    if (typeof XLSX === 'undefined') {
-        toast('Library Excel gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.');
+$('downloadTemplate').addEventListener('click', async () => {
+    try {
+        await ensureExcelImport();
+    } catch (error) {
+        toast('Library Excel belum dapat dimuat. Periksa koneksi lalu coba lagi.');
         return;
     }
 
@@ -464,11 +547,13 @@ function analyse(rows) {
     `);
 }
 
-function handleFile(file) {
+async function handleFile(file) {
     if (!file) return;
 
-    if (typeof XLSX === 'undefined') {
-        toast('Library Excel gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.');
+    try {
+        await ensureExcelImport();
+    } catch (error) {
+        toast('Library Excel belum dapat dimuat. Periksa koneksi lalu coba lagi.');
         return;
     }
 
@@ -498,6 +583,12 @@ function handleFile(file) {
 }
 
 $('uploadInput').addEventListener('change', event => handleFile(event.target.files[0]));
+window.addEventListener('fiber:store', () => {
+    if (!editingNik && !deleteNik) {
+        employees = loadList();
+        render();
+    }
+});
 
 /* TARIK DAN LEPAS FILE */
 ['dragenter', 'dragover'].forEach(name => {
@@ -517,15 +608,16 @@ $('uploadInput').addEventListener('change', event => handleFile(event.target.fil
 $('dropzone').addEventListener('drop', event => handleFile(event.dataTransfer.files[0]));
 
 /* IMPORT */
-$('importBtn').addEventListener('click', () => {
+$('importBtn').addEventListener('click', async () => {
     if (!pendingRows.length) return;
 
     const count = pendingRows.length;
 
     employees.push(...pendingRows);
-    saveList(`${count} karyawan berhasil diimport.`);
-    render();
-    closeUpload();
+    if (await saveList(`${count} karyawan berhasil diimport.`)) {
+        render();
+        closeUpload();
+    }
 });
 
 /* TAMPILKAN DATA PERTAMA KALI */

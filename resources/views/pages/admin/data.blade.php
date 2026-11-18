@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Kelola Data')
+@section('title', 'Hapus Pekerjaan')
 @section('nav', 'data')
 @section('page', 'data')
 
@@ -10,7 +10,7 @@
 
 @section('topbar')
 @verbatim
-<span class="crumb">Superadmin / <strong>Kelola Data</strong></span>
+<span class="crumb">Superadmin / <strong>Hapus Pekerjaan</strong></span>
 @endverbatim
 @endsection
 
@@ -19,8 +19,8 @@
         <section class="content">
             <div class="heading">
                 <div>
-                    <h1>Kelola Data</h1>
-                    <p>Hapus pekerjaan yang salah input atau sudah tidak diperlukan. Setiap penghapusan wajib beralasan dan tercatat di Log Aktivitas.</p>
+                    <h1>Hapus pekerjaan</h1>
+                    <p>Penghapusan wajib disertai alasan dan dicatat di Log Aktivitas.</p>
                 </div>
             </div>
             <div class="toolbar">
@@ -29,8 +29,8 @@
             </div>
             <section class="table-card"><div id="tbl"></div></section>
         </section>
-    
 @endverbatim
+@include('partials.footer')
 @endsection
 
 @push('scripts')

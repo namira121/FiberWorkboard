@@ -16,7 +16,7 @@ class AuthController extends Controller
     public const HOME = [
         'leader'     => '/leader/dashboard',
         'public'     => '/public/dashboard',
-        'superadmin' => '/leader/dashboard',
+        'superadmin' => '/admin/dashboard',
     ];
 
     public function login(Request $request): JsonResponse

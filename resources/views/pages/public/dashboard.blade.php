@@ -96,9 +96,7 @@
 @endsection
 
 @section('topbar')
-@verbatim
-<span class="crumb">Public / <strong>Dashboard</strong></span>
-@endverbatim
+@include('partials.breadcrumb', ['title' => 'Dashboard'])
 @endsection
 
 @section('content')
@@ -115,9 +113,9 @@
                 </div>
             </div>
 
-            <!-- FORM TAMBAH JOB MANUAL -->
-            <section class="manual-card" aria-labelledby="manualTitle">
-                <h2 class="manual-title" id="manualTitle">Tambah job manual</h2>
+            <!-- Form data entry is collapsed so the shared display remains monitoring-first. -->
+            <details class="manual-card public-manual">
+                <summary class="manual-title">Tambah job manual</summary>
                 <form id="manualForm" novalidate autocomplete="off">
                     <div class="manual-grid six">
                         <div class="m-field c3"><label for="mProd">Prod. Order <span style="color:#c83e39">*</span></label><div class="nik-row"><input id="mProd" placeholder="400155497 / MAN_0001"><button type="button" class="nik-add" id="manProdBtn" style="width:auto;padding:0 11px;font-size:11px" title="Pekerjaan tanpa picklist: isi otomatis MAN_0001, MAN_0002, ...">MAN</button></div></div>
@@ -143,7 +141,7 @@
                     </div>
                 </form>
                 <datalist id="nikList"></datalist>
-            </section>
+            </details>
 
             <!-- FILTER -->
             <div class="filters">
@@ -164,7 +162,8 @@
             </div>
 
             <div class="table-card">
-                <div class="table-scroll">
+                <p class="mobile-scroll-hint">Geser tabel ke samping untuk melihat kolom lainnya.</p>
+                <div class="table-scroll" tabindex="0" aria-label="Tabel pekerjaan, dapat digeser ke samping">
                     <table>
                         <thead><tr>
                             <th>Prod. Order</th><th>No. Material</th><th>Deskripsi Material</th><th>Pekerjaan</th><th>No. SO</th><th>Jumlah</th>
@@ -185,8 +184,6 @@
 @endsection
 
 @push('scripts')
-<script src="@v('assets/picklist-data.js')"></script>
-<script src="@v('assets/sim-data.js')"></script>
 <script src="@v('assets/store.js')"></script>
 @verbatim
 <script>window.DASH_ROLE = 'Public';</script>

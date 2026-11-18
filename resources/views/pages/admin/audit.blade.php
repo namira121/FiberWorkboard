@@ -34,8 +34,8 @@
             </div>
             <section class="table-card"><div id="tbl"></div></section>
         </section>
-    
 @endverbatim
+@include('partials.footer')
 @endsection
 
 @push('scripts')

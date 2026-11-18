@@ -21,9 +21,40 @@
         toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
     }
 
+    let activeModalTrigger = null;
+    function openModal(id, focusTarget) {
+        activeModalTrigger = document.activeElement;
+        $('mainContent').inert = true;
+        const sidebar = $('appSidebar');
+        if (sidebar) sidebar.inert = true;
+        $(id).classList.add('show');
+        if (focusTarget) focusTarget.focus();
+    }
+    function closeModal(id, restoreFocus = true) {
+        $(id).classList.remove('show');
+        $('mainContent').inert = false;
+        const sidebar = $('appSidebar');
+        if (sidebar) sidebar.inert = false;
+        if (restoreFocus && activeModalTrigger instanceof HTMLElement) activeModalTrigger.focus();
+        activeModalTrigger = null;
+    }
+
     /* ================= TABEL ================= */
     let shownRows = [];
     function render() {
+        if (!S.hasLoaded() && S.isLoading()) {
+            shownRows = [];
+            $('tableBody').innerHTML = '<tr><td colspan="11" class="empty">Memuat data pekerjaan...</td></tr>';
+            $('resultCount').textContent = 'Memuat data...';
+            return;
+        }
+        if (!S.hasLoaded() && S.error()) {
+            shownRows = [];
+            $('tableBody').innerHTML = '<tr><td colspan="11" class="empty">Data belum tersedia. Gunakan tombol Coba lagi di atas.</td></tr>';
+            $('resultCount').textContent = 'Data gagal dimuat';
+            return;
+        }
+
         const query = $('searchInput').value.trim().toLowerCase();
         const status = $('statusFilter').value;
         const date = $('dateFilter').value;
@@ -106,10 +137,9 @@
                 ${e.reason ? `<div class="history-reason"><strong>Alasan:</strong> ${esc(e.reason)}</div>` : ''}
             </article>`).join('')
             : '<div class="history-empty">Belum ada riwayat status untuk pekerjaan ini.</div>';
-        $('historyModal').classList.add('show');
-        $('closeHistoryModal').focus();
+        openModal('historyModal', $('closeHistoryModal'));
     }
-    const closeHistory = () => $('historyModal').classList.remove('show');
+    const closeHistory = () => closeModal('historyModal');
     $('closeHistoryModal').addEventListener('click', closeHistory);
     $('historyModal').addEventListener('click', e => { if (e.target === $('historyModal')) closeHistory(); });
 
@@ -160,10 +190,9 @@
         $('shortReason').value = '';
         $('progressError').textContent = '';
         syncProgress();
-        $('progressModal').classList.add('show');
-        $('progressRange').focus();
+        openModal('progressModal', $('progressRange'));
     }
-    function closeProgress() { $('progressModal').classList.remove('show'); pJob = null; pMode = ''; pIssue = ''; }
+    function closeProgress() { closeModal('progressModal'); pJob = null; pMode = ''; pIssue = ''; }
 
     document.querySelectorAll('.pc-btn').forEach(btn => btn.addEventListener('click', () => {
         if (!pJob) return;
@@ -181,7 +210,7 @@
     $('progressReason').addEventListener('input', () => { $('progressError').textContent = ''; });
     $('shortReason').addEventListener('input', () => { $('progressError').textContent = ''; });
 
-    $('saveProgressBtn').addEventListener('click', () => {
+    $('saveProgressBtn').addEventListener('click', async () => {
         if (!pJob) return;
         const prod = pJob.prod;
 
@@ -189,14 +218,14 @@
             if (!pIssue) { $('progressError').textContent = 'Pilih jenis masalah (Man, Material, Method, Machine, Environment).'; return; }
             const reason = $('progressReason').value.trim();
             if (!reason) { $('progressError').textContent = `Alasan ${pMode.toLowerCase()} wajib diisi.`; $('progressReason').focus(); return; }
-            const res = S.hold(prod, pMode, pIssue, reason, ACTOR, ROLE);
+            const res = await S.hold(prod, pMode, pIssue, reason, ACTOR, ROLE);
             if (!res.ok) { $('progressError').textContent = res.error; return; }
             toast(`Pekerjaan diubah menjadi ${pMode} (${pIssue}).`);
         } else {
             const v = Number($('progressRange').value);
             const why = $('shortReason').value.trim();
             if (S.belowTarget(pJob, v) && !why) { $('progressError').textContent = `Progress di bawah target ${pJob.target}%. Alasan wajib diisi.`; $('shortReason').focus(); return; }
-            const res = S.setProgress(prod, v, ACTOR, ROLE, why);
+            const res = await S.setProgress(prod, v, ACTOR, ROLE, why);
             if (!res.ok) { $('progressError').textContent = res.error; return; }
             toast(`Progress pekerjaan menjadi ${v}%.`);
         }
@@ -222,10 +251,9 @@
         $('reasonCopy').className = 'reason-copy ' + (pending ? 'pending' : 'cancel');
         $('reasonLockNote').hidden = IS_LEADER;
         $('reactivateBtn').disabled = !IS_LEADER;
-        $('reasonModal').classList.add('show');
-        $('closeReason').focus();
+        openModal('reasonModal', $('closeReason'));
     }
-    function closeReason() { $('reasonModal').classList.remove('show'); rJob = null; }
+    function closeReason() { closeModal('reasonModal'); rJob = null; }
 
     $('reactivateBtn').addEventListener('click', () => {
         if (!rJob) return;
@@ -256,25 +284,26 @@
             free.map(e => `<option value="${esc(e.nik)}">${esc(e.name)} (${esc(e.nik)})${e.bagian ? ' · ' + esc(e.bagian) : ''}</option>`).join('');
         $('addEmployeeBtn').disabled = !free.length;
     }
-    function openTeam(job) { tJob = job; renderTeam(); $('teamModal').classList.add('show'); $('closeTeamModal').focus(); }
-    function closeTeam() { $('teamModal').classList.remove('show'); tJob = null; render(); }
+    function openTeam(job) { tJob = job; renderTeam(); openModal('teamModal', $('closeTeamModal')); }
+    function closeTeam() { closeModal('teamModal'); tJob = null; render(); }
 
     if (IS_LEADER) {
-        $('assignedEmployees').addEventListener('click', e => {
+        $('assignedEmployees').addEventListener('click', async e => {
             const btn = e.target.closest('[data-remove]');
             if (!btn || !tJob) return;
             const person = tJob.team.find(p => p.id === btn.dataset.remove);
-            S.removeMember(tJob.prod, btn.dataset.remove);
+            const res = await S.removeMember(tJob.prod, btn.dataset.remove);
+            if (!res.ok) { toast(res.error); return; }
             renderTeam(); render();
             if (person) toast(`${person.name} dilepas dari pekerjaan.`);
         });
-        $('addEmployeeBtn').addEventListener('click', () => {
+        $('addEmployeeBtn').addEventListener('click', async () => {
             if (!tJob) return;
             const id = $('employeeSelect').value;
             if (!id) { toast('Pilih karyawan terlebih dahulu.'); return; }
             const emp = S.employees().find(x => x.nik === id);
             if (!emp) return;
-            const res = S.addMember(tJob.prod, { id: emp.nik, name: emp.name });
+            const res = await S.addMember(tJob.prod, { id: emp.nik, name: emp.name });
             if (!res.ok) { toast(res.error); return; }
             renderTeam(); render();
             toast(`${emp.name} ditambahkan ke tim.`);
@@ -291,22 +320,21 @@
         const v = job.target == null ? 100 : job.target;
         $('targetRange').value = v; paint($('targetRange'), $('targetBubble'), v);
         $('targetError').textContent = '';
-        $('targetModal').classList.add('show');
-        $('targetRange').focus();
+        openModal('targetModal', $('targetRange'));
     }
-    function closeTarget() { $('targetModal').classList.remove('show'); gJob = null; }
+    function closeTarget() { closeModal('targetModal'); gJob = null; }
     if (IS_LEADER) {
         $('targetRange').addEventListener('input', () => paint($('targetRange'), $('targetBubble'), Number($('targetRange').value)));
-        $('saveTargetBtn').addEventListener('click', () => {
+        $('saveTargetBtn').addEventListener('click', async () => {
             if (!gJob) return;
             const v = Number($('targetRange').value);
-            const res = S.setTarget(gJob.prod, v, ACTOR, ROLE);
+            const res = await S.setTarget(gJob.prod, v, ACTOR, ROLE);
             if (!res.ok) { $('targetError').textContent = res.error; return; }
             closeTarget(); render(); toast(`Target plan diatur ke ${v}%.`);
         });
-        $('clearTarget').addEventListener('click', () => {
+        $('clearTarget').addEventListener('click', async () => {
             if (!gJob) return;
-            const res = S.setTarget(gJob.prod, null, ACTOR, ROLE);
+            const res = await S.setTarget(gJob.prod, null, ACTOR, ROLE);
             if (!res.ok) { $('targetError').textContent = res.error; return; }
             closeTarget(); render(); toast('Target plan dihapus.');
         });
@@ -352,7 +380,7 @@
     $('manProdBtn').addEventListener('click', () => { $('mProd').value = S.nextManualProd(); $('manualError').textContent = ''; $('mWork').focus(); });
     $('manualForm').addEventListener('input', () => { $('manualError').textContent = ''; });
 
-    $('manualForm').addEventListener('submit', e => {
+    $('manualForm').addEventListener('submit', async e => {
         e.preventDefault();
         const prod = $('mProd').value.trim();
         const material = $('mMaterial').value.trim();
@@ -366,7 +394,7 @@
         if (!qty || qty < 1) { fail('Qty minimal 1.'); return; }
         if (!commitNik()) return;
 
-        const res = S.addJob({ prod, material, so, work, qty: `${qty} pc${qty > 1 ? 's' : ''}`, team: manualPeople }, ACTOR, ROLE);
+        const res = await S.addJob({ prod, material, so, work, qty: `${qty} pc${qty > 1 ? 's' : ''}`, team: manualPeople }, ACTOR, ROLE);
         if (!res.ok) { fail(res.error); return; }
 
         const n = manualPeople.length;
@@ -436,6 +464,7 @@
 
     /* Sinkron bila data diubah di tab/halaman lain */
     window.addEventListener('storage', e => { if (e.key === S.KEYS.jobs || e.key === S.KEYS.log) render(); });
+    window.addEventListener('fiber:store', render);
     window.addEventListener('pageshow', render);
 
     fillNikList();

@@ -52,7 +52,21 @@
         back.className = 'lt-back';
         back.innerHTML = `<div class="lt-box" role="dialog" aria-modal="true">${html}</div>`;
         document.body.appendChild(back);
-        const close = () => { back.remove(); document.removeEventListener('keydown', onKey); };
+        const trigger = document.activeElement;
+        const dialog = back.firstElementChild;
+        const title = dialog.querySelector('h3');
+        if (title) dialog.setAttribute('aria-label', title.textContent);
+        const main = document.getElementById('mainContent');
+        const sidebar = document.getElementById('appSidebar');
+        if (main) main.inert = true;
+        if (sidebar) sidebar.inert = true;
+        const close = () => {
+            back.remove();
+            document.removeEventListener('keydown', onKey);
+            if (main) main.inert = false;
+            if (sidebar) sidebar.inert = false;
+            if (trigger instanceof HTMLElement) trigger.focus();
+        };
         const onKey = e => { if (e.key === 'Escape') close(); };
         document.addEventListener('keydown', onKey);
         back.addEventListener('mousedown', e => { if (e.target === back) close(); });
@@ -79,8 +93,8 @@
         const why = q(m.box, '#ltWhy'); why.focus();
         why.addEventListener('input', () => { q(m.box, '#ltErr').textContent = ''; });
         q(m.box, '#ltCancel').addEventListener('click', m.close);
-        q(m.box, '#ltOk').addEventListener('click', () => {
-            const res = S.reactivate(job.prod, ACTOR, ROLE, why.value);
+        q(m.box, '#ltOk').addEventListener('click', async () => {
+            const res = await S.reactivate(job.prod, ACTOR, ROLE, why.value);
             if (!res.ok) { q(m.box, '#ltErr').textContent = res.error; return; }
             m.close();
             toast(`Pekerjaan diaktifkan kembali (${res.job.status}, ${res.job.progress}%).`);
@@ -99,7 +113,10 @@
                 <button type="button" class="lt-opt" id="ltText"><span class="lt-ico">✎</span><div><b>Edit tulisan</b></div></button>
                 <div class="lt-actions"><button type="button" class="lt-btn" id="ltClose">Tutup</button></div>`;
             q(m.box, '#ltClose').addEventListener('click', m.close);
-            q(m.box, '#ltLink').addEventListener('click', () => { location.href = '/leader/scan?link=' + encodeURIComponent(job.prod); });
+            q(m.box, '#ltLink').addEventListener('click', () => {
+                const scanUrl = (window.WORKSPACE_URLS && window.WORKSPACE_URLS.scan) || '/leader/scan';
+                location.href = scanUrl + '?link=' + encodeURIComponent(job.prod);
+            });
             q(m.box, '#ltText').addEventListener('click', form);
         };
         const form = () => {
@@ -122,8 +139,8 @@
             q(m.box, '#eWork').focus();
             m.box.addEventListener('input', () => { q(m.box, '#ltErr').textContent = ''; });
             q(m.box, '#ltBack').addEventListener('click', chooser);
-            q(m.box, '#ltSave').addEventListener('click', () => {
-                const res = S.updateJob(job.prod, {
+            q(m.box, '#ltSave').addEventListener('click', async () => {
+                const res = await S.updateJob(job.prod, {
                     work: q(m.box, '#eWork').value, desc: q(m.box, '#eDesc').value,
                     material: q(m.box, '#eMat').value, so: q(m.box, '#eSo').value,
                     qty: String(Math.max(1, Math.floor(Number(q(m.box, '#eQty').value) || 1)))
@@ -167,7 +184,7 @@
             <div class="lt-info ${held || done ? 'lt-warn' : ''}">Sudah ada di dashboard dengan status <strong>${esc(job.status)}</strong>${held && job.issue ? ' (' + esc(job.issue) + ')' : ''}, progress ${job.progress}%.${held && job.reason ? '<br>Alasan: ' + esc(job.reason) : ''}${done ? '<br>Kalau diaktifkan kembali (repair), progress mulai lagi dari 0%.' : ''}${!held && !done ? '<br>Tidak perlu ditambahkan lagi.' : ''}</div>
             <div class="lt-actions">
                 <button type="button" class="lt-btn" id="ltClose">Tutup</button>
-                ${held || done ? '<button type="button" class="lt-btn main" id="ltAct">Aktifkan kembali</button>' : '<a class="lt-btn main" style="text-decoration:none" href="/leader/dashboard">Lihat di dashboard</a>'}
+                ${held || done ? '<button type="button" class="lt-btn main" id="ltAct">Aktifkan kembali</button>' : '<a class="lt-btn main" style="text-decoration:none" href="' + ((window.WORKSPACE_URLS && window.WORKSPACE_URLS.dashboard) || '/leader/dashboard') + '">Lihat di dashboard</a>'}
             </div>`);
         q(m.box, '#ltClose').addEventListener('click', m.close);
         const act = q(m.box, '#ltAct');

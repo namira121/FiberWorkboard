@@ -94,7 +94,7 @@
                 return h('td', { class: c.cls || '' }, v == null ? '-' : v);
             })));
         });
-        return h('div', { class: 'table-scroll' }, h('table', null, [
+        return h('div', { class: 'table-scroll', tabindex: '0', 'aria-label': 'Tabel data, dapat digeser ke samping' }, h('table', null, [
             h('thead', null, h('tr', null, cols.map(function (c) { return h('th', { text: c.h }); }))),
             tb
         ]));
@@ -159,6 +159,7 @@
                     });
                     inp.value = f.value || '';
                 }
+                inp.id = 'dlg_' + f.name;
                 inputs[f.name] = inp;
 
                 var control = inp;
@@ -169,7 +170,7 @@
                     })]);
                 }
                 form.appendChild(h('div', { class: 'fld' }, [
-                    h('label', { text: f.label }), control,
+                    h('label', { for: inp.id, text: f.label }), control,
                     f.hint ? h('div', { class: 'hint', text: f.hint }) : null
                 ]));
             });
@@ -347,20 +348,71 @@
         var host = $('#tbl');
         var rowsAll = [];
         var labels = {};
-        var lastId = null;
+        var currentPage = 1;
+        var lastPage = 1;
+        var totalRows = 0;
 
-        function query(before) {
+        function query(page) {
             var p = [];
             [['from', '#f_from'], ['to', '#f_to'], ['nik', '#f_nik'], ['action', '#f_action'], ['q', '#f_q']].forEach(function (x) {
                 var v = $(x[1]).value.trim();
                 if (v) p.push(x[0] + '=' + encodeURIComponent(v));
             });
-            if (before) p.push('before_id=' + before);
-            p.push('limit=50');
+            p.push('page=' + Math.max(1, page || 1));
+            p.push('limit=20');
             return '/api/admin/audit?' + p.join('&');
         }
 
-        function draw(more) {
+        function pagination() {
+            var pages = [];
+            if (lastPage <= 7) {
+                for (var i = 1; i <= lastPage; i++) pages.push(i);
+            } else {
+                pages.push(1);
+                if (currentPage > 4) pages.push('...');
+                for (var n = Math.max(2, currentPage - 1); n <= Math.min(lastPage - 1, currentPage + 1); n++) pages.push(n);
+                if (currentPage < lastPage - 3) pages.push('...');
+                pages.push(lastPage);
+            }
+
+            var buttons = [
+                h('button', {
+                    type: 'button', class: 'page', text: 'Sebelumnya',
+                    disabled: currentPage <= 1,
+                    onclick: function (e) { busy(e.target, function () { return load(currentPage - 1); }); }
+                })
+            ];
+
+            pages.forEach(function (page) {
+                if (page === '...') {
+                    buttons.push(h('span', { class: 'page-gap', text: '...' }));
+                    return;
+                }
+                buttons.push(h('button', {
+                    type: 'button',
+                    class: 'page' + (page === currentPage ? ' active' : ''),
+                    text: String(page),
+                    'aria-current': page === currentPage ? 'page' : null,
+                    onclick: function (e) { busy(e.target, function () { return load(page); }); }
+                }));
+            });
+
+            buttons.push(h('button', {
+                type: 'button', class: 'page', text: 'Berikutnya',
+                disabled: currentPage >= lastPage,
+                onclick: function (e) { busy(e.target, function () { return load(currentPage + 1); }); }
+            }));
+
+            return h('div', { class: 'audit-pagination', role: 'navigation', 'aria-label': 'Pagination log aktivitas' }, [
+                h('span', {
+                    class: 'page-info',
+                    text: 'Halaman ' + currentPage + ' dari ' + lastPage + ' · ' + totalRows + ' aktivitas'
+                }),
+                h('div', { class: 'page-buttons' }, buttons)
+            ]);
+        }
+
+        function draw() {
             host.textContent = '';
             host.appendChild(table([
                 { h: 'Waktu', cls: 'nowrap', cell: function (l) { return l.at; } },
@@ -369,18 +421,19 @@
                 { h: 'Keterangan', cls: 'msg', cell: function (l) { return l.description || '-'; } },
                 { h: 'IP', cls: 'nowrap', cell: function (l) { return l.ip || '-'; } }
             ], rowsAll, 'Tidak ada aktivitas yang cocok dengan filter.'));
-            if (more) {
-                host.appendChild(h('div', { class: 'actions', style: 'padding:0 20px 16px' }, h('button', {
-                    class: 'btn ghost', type: 'button', text: 'Muat lebih banyak',
-                    onclick: function (e) { busy(e.target, function () { return load(true); }); }
-                })));
-            }
+            host.appendChild(pagination());
         }
 
-        function load(append) {
-            return api(query(append ? lastId : null)).then(function (r) {
-                if (!append) {
-                    rowsAll = [];
+        function load(page) {
+            page = Math.max(1, page || 1);
+            return api(query(page)).then(function (r) {
+                rowsAll = r.logs || [];
+                currentPage = r.pagination ? r.pagination.current_page : page;
+                lastPage = r.pagination ? r.pagination.last_page : 1;
+                totalRows = r.pagination ? r.pagination.total : rowsAll.length;
+                if (page > lastPage) return load(lastPage);
+
+                if (currentPage === 1) {
                     labels = r.actions || labels;
                     if (r.actions && $('#f_action').options.length <= 1) {
                         Object.keys(r.actions).forEach(function (k) { $('#f_action').appendChild(h('option', { value: k, text: r.actions[k] })); });
@@ -392,15 +445,15 @@
                     sb.appendChild(stat('Login gagal hari ini', s.failed_today, '', s.failed_today > 0 ? 'warn' : ''));
                     sb.appendChild(stat('Aksi admin hari ini', s.admin_today, 'akun dan hapus data'));
                 }
-                rowsAll = rowsAll.concat(r.logs);
-                lastId = rowsAll.length ? rowsAll[rowsAll.length - 1].id : null;
-                draw(r.has_more);
+                draw();
+                var content = document.querySelector('.content');
+                if (content) content.scrollTop = 0;
             }).catch(fail);
         }
 
-        $('#applyBtn').addEventListener('click', function () { load(false); });
-        $('#f_q').addEventListener('keydown', function (e) { if (e.key === 'Enter') load(false); });
-        load(false);
+        $('#applyBtn').addEventListener('click', function () { load(1); });
+        $('#f_q').addEventListener('keydown', function (e) { if (e.key === 'Enter') load(1); });
+        load(1);
     }
 
     /* ================= mulai ================= */

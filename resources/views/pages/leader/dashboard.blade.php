@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard Leader')
+@section('title', auth()->user()?->role === 'superadmin' ? 'Dashboard Superadmin' : 'Dashboard Leader')
 @section('nav', 'dashboard')
 
 @push('head')
@@ -132,9 +132,7 @@
 @endsection
 
 @section('topbar')
-@verbatim
-<span class="crumb">Leader / <strong>Dashboard</strong></span>
-@endverbatim
+@include('partials.breadcrumb', ['title' => 'Dashboard'])
 @endsection
 
 @section('content')
@@ -201,7 +199,8 @@
             </div>
 
             <div class="table-card">
-                <div class="table-scroll">
+                <p class="mobile-scroll-hint">Geser tabel ke samping untuk melihat kolom lainnya.</p>
+                <div class="table-scroll" tabindex="0" aria-label="Tabel pekerjaan, dapat digeser ke samping">
                     <table>
                         <thead><tr>
                             <th>Prod. Order</th><th>No. Material</th><th>Deskripsi Material</th><th>Pekerjaan</th><th>No. SO</th><th>Jumlah</th>
@@ -222,8 +221,6 @@
 @endsection
 
 @push('scripts')
-<script src="@v('assets/picklist-data.js')"></script>
-<script src="@v('assets/sim-data.js')"></script>
 <script src="@v('assets/store.js')"></script>
 <script src="@v('assets/leader-tools.js')"></script>
 @verbatim

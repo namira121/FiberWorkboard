@@ -1,43 +1,45 @@
-        /* Verifikasi NIK & password dilakukan di server (POST /api/login).
-           Kalau benar, server menyimpan token perangkat di cookie -> login cukup sekali per HP.
-           Akun diatur di data/accounts.json (lihat tambah-akun.js). */
+        /* Verifikasi NIK & password dilakukan di server (POST /api/login). */
 
         const errorBox = document.getElementById('loginError');
+        const form = document.getElementById('loginForm');
+        const nikInput = document.getElementById('nik');
+        const passwordInput = document.getElementById('password');
+        const submitBtn = document.getElementById('submitBtn');
 
         function showError(message) {
             errorBox.textContent = message;
             errorBox.classList.remove('hidden');
+            form.setAttribute('aria-busy', 'false');
         }
 
         function hideError() {
             errorBox.classList.add('hidden');
         }
 
-        document.getElementById('nik').addEventListener('input', hideError);
-        document.getElementById('password').addEventListener('input', hideError);
+        nikInput.addEventListener('input', hideError);
+        passwordInput.addEventListener('input', hideError);
 
-        // Toggle Show/Hide Password
+        // Toggle show/hide password.
         function togglePasswordVisibility() {
-            const passwordInput = document.getElementById('password');
             const toggleBtn = document.getElementById('togglePassword');
+            const show = passwordInput.type === 'password';
 
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                toggleBtn.textContent = 'Sembunyikan';
-            } else {
-                passwordInput.type = 'password';
-                toggleBtn.textContent = 'Lihat';
-            }
+            passwordInput.type = show ? 'text' : 'password';
+            toggleBtn.textContent = show ? 'Sembunyikan' : 'Lihat';
+            toggleBtn.setAttribute('aria-pressed', String(show));
+            toggleBtn.setAttribute('aria-label', show ? 'Sembunyikan password' : 'Tampilkan password');
+            passwordInput.focus();
         }
+        document.getElementById('togglePassword').addEventListener('click', togglePasswordVisibility);
 
-        // Login Handler
+        // Login handler.
         function handleLogin() {
-            const nik = document.getElementById('nik').value.trim();
-            const password = document.getElementById('password').value;
-            const submitBtn = document.getElementById('submitBtn');
+            const nik = nikInput.value.trim();
+            const password = passwordInput.value;
             const label = submitBtn.textContent;
 
             hideError();
+            form.setAttribute('aria-busy', 'true');
             submitBtn.textContent = 'Memproses...';
             submitBtn.disabled = true;
 
@@ -60,6 +62,11 @@
                     submitBtn.disabled = false;
                 });
         }
+
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            handleLogin();
+        });
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));

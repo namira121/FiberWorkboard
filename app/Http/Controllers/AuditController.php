@@ -20,10 +20,12 @@ class AuditController extends Controller
             'action'    => 'nullable|string|max:50',
             'q'         => 'nullable|string|max:100',
             'before_id' => 'nullable|integer',
-            'limit'     => 'nullable|integer|between:1,200',
+            'page'      => 'nullable|integer|min:1',
+            'limit'     => 'nullable|integer|between:1,20',
         ], AdminValidation::MESSAGES, AdminValidation::ATTRIBUTES);
 
-        $limit = (int) ($d['limit'] ?? 50);
+        $limit = (int) ($d['limit'] ?? 20);
+        $page = (int) ($d['page'] ?? 1);
         $q = AuditLog::orderByDesc('id');
 
         if (! empty($d['from'])) {
@@ -46,13 +48,32 @@ class AuditController extends Controller
             $q->where('id', '<', (int) $d['before_id']);
         }
 
-        $rows = $q->limit($limit + 1)->get();
-        $more = $rows->count() > $limit;
+        if (! empty($d['before_id'])) {
+            $rows = $q->limit($limit + 1)->get();
+            $more = $rows->count() > $limit;
+            $page = 1;
+            $lastPage = $more ? 2 : 1;
+            $total = null;
+            $logs = $rows->take($limit);
+        } else {
+            $paginator = $q->paginate($limit, ['*'], 'page', $page);
+            $logs = collect($paginator->items());
+            $more = $paginator->hasMorePages();
+            $page = $paginator->currentPage();
+            $lastPage = max(1, $paginator->lastPage());
+            $total = $paginator->total();
+        }
 
         $out = [
             'ok'       => true,
             'has_more' => $more,
-            'logs'     => $rows->take($limit)->map(fn (AuditLog $l) => [
+            'pagination' => [
+                'current_page' => $page,
+                'last_page'    => $lastPage,
+                'per_page'     => $limit,
+                'total'        => $total,
+            ],
+            'logs'     => $logs->map(fn (AuditLog $l) => [
                 'id'          => $l->id,
                 'at'          => $l->occurred_at->format('Y-m-d H:i:s'),
                 'nik'         => $l->nik,
@@ -64,7 +85,7 @@ class AuditController extends Controller
             ])->values(),
         ];
 
-        if (empty($d['before_id'])) {
+        if (empty($d['before_id']) && $page === 1) {
             $today = now()->startOfDay();
             $out['actions'] = AuditService::ACTIONS;
             $out['summary'] = [
