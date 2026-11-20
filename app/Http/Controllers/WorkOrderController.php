@@ -48,6 +48,12 @@ class WorkOrderController extends Controller
         ]);
     }
 
+    /** GET /api/work-orders/next-manual : nomor MAN_ berikutnya, dihitung dari SEMUA pekerjaan (bukan hanya milik leader ini). */
+    public function nextManual(): JsonResponse
+    {
+        return response()->json(['ok' => true, 'prod' => $this->svc->nextManualProd()]);
+    }
+
     public function store(Request $r): JsonResponse
     {
         $data = $this->check($r, [

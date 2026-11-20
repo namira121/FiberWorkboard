@@ -47,8 +47,4 @@
             <a href="{{ $href }}"@if ($key === $active) class="active" aria-current="page"@endif><span class="ico">{!! $svg($iconName) !!}</span><span class="nav-label">{{ $label }}</span></a>
         @endforeach
     </nav>
-
-    <div class="sidebar-bottom">
-        <button class="logout" id="logoutBtn">{!! $svg('logout', 16) !!}<span class="logout-text">Log out</span></button>
-    </div>
 </aside>

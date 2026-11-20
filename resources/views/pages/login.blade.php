@@ -119,12 +119,14 @@
         <div class="flex items-center space-x-3 mb-2 sm:mb-0">
             <span class="font-bold text-red-500 italic">new <span class="text-white font-normal not-italic">armada</span></span>
             <span class="text-gray-500">|</span>
-            <span class="text-gray-300 text-[11px]">Portal Internal Section Viber</span>
+            <span class="text-gray-300 text-[11px]">Portal Internal Fiber</span>
         </div>
 
         <!-- Right Side Copyright -->
         <div class="text-gray-400 text-[11px]">
-            &copy; 2026 PT Mekar Armada Jaya. All Rights Reserved.
+@endverbatim
+            &copy; {{ date('Y') }} PT Mekar Armada Jaya. All Rights Reserved.
+@verbatim
         </div>
     </footer>
 

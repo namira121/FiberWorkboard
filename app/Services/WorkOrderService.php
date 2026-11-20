@@ -158,14 +158,23 @@ class WorkOrderService
     {
         $prod = $this->resolveProd($data['prod'] ?? null, $u);
 
-        if (WorkOrder::where('prod_order', $prod)->exists()) {
-            throw new BusinessRuleException("Prod. Order {$prod} sudah ada di daftar pekerjaan.");
+        if ($dup = WorkOrder::withoutGlobalScopes()->where('prod_order', $prod)->first()) {
+            if (preg_match('/^MAN_\d+$/', $prod)) {
+                // Nomor MAN_ dibagi semua leader. Kalau sudah terpakai (mis. oleh leader lain), pakai nomor berikutnya.
+                $prod = $this->nextManualProd();
+            } else {
+                $other = $u->role === 'leader' && $dup->user_id !== $u->id;
+                throw new BusinessRuleException($other
+                    ? "Prod. Order {$prod} sudah ditambahkan oleh leader lain."
+                    : "Prod. Order {$prod} sudah ada di daftar pekerjaan.");
+            }
         }
 
         $niks = $this->resolveTeam($data['team'] ?? []);
 
         $w = WorkOrder::create([
             'prod_order'  => $prod,
+            'user_id'     => $u->id,
             'job_date'    => $this->today(),
             'material'    => trim((string) ($data['material'] ?? '')),
             'description' => trim((string) ($data['desc'] ?? '')),
@@ -203,10 +212,10 @@ class WorkOrderService
         return $raw;
     }
 
-    private function nextManualProd(): string
+    public function nextManualProd(): string
     {
         // pola tetap (tanpa input pengguna), aman dari injeksi
-        $max = (int) WorkOrder::whereRaw("prod_order REGEXP '^MAN_[0-9]+$'")
+        $max = (int) WorkOrder::withoutGlobalScopes()->whereRaw("prod_order REGEXP '^MAN_[0-9]+$'")
             ->selectRaw('MAX(CAST(SUBSTRING(prod_order, 5) AS UNSIGNED)) AS m')
             ->value('m');
 
@@ -443,7 +452,7 @@ class WorkOrderService
             if (preg_match('/^man/i', $np)) {
                 throw new BusinessRuleException('Prod. Order dari picklist tidak boleh berawalan MAN.');
             }
-            if ($dup = WorkOrder::where('prod_order', $np)->first()) {
+            if ($dup = WorkOrder::withoutGlobalScopes()->where('prod_order', $np)->first()) {
                 throw new BusinessRuleException("Prod. Order {$np} sudah ada di dashboard (status {$dup->status}).");
             }
 

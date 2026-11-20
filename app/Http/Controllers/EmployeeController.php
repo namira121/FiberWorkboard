@@ -57,7 +57,7 @@ class EmployeeController extends Controller
     {
         $e = $this->find($nik);
 
-        if ($e->workOrders()->exists()) {
+        if ($e->workOrders()->withoutGlobalScopes()->exists()) {
             throw new BusinessRuleException('Karyawan masih tercatat di pekerjaan, tidak bisa dihapus.', 409);
         }
         $e->delete();

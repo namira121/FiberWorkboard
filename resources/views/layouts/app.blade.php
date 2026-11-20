@@ -20,8 +20,7 @@
     @yield('modals')
 
     <main class="main">
-        <header class="topbar">@yield('topbar')</header>
-
+        <header class="topbar">@yield('topbar')@include('partials.profile')</header>
         @yield('content')
     </main>
 </div>

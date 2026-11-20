@@ -198,12 +198,9 @@
 
         </section>
 
-        <!-- FOOTER -->
-        <footer class="footer">
-            <span><strong>© 2026 Section Viber</strong> · Portal Internal Section Viber</span>
-            <span>Hak cipta dilindungi undang-undang.</span>
-        </footer>
-
+@endverbatim
+@include('partials.footer')
+@verbatim
     
 @endverbatim
 @endsection

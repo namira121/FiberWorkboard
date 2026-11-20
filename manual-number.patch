@@ -1,0 +1,68 @@
+--- a/app/Services/WorkOrderService.php
++++ b/app/Services/WorkOrderService.php
+@@ -159,10 +159,15 @@
+         $prod = $this->resolveProd($data['prod'] ?? null, $u);
+ 
+         if ($dup = WorkOrder::withoutGlobalScopes()->where('prod_order', $prod)->first()) {
+-            $other = $u->role === 'leader' && $dup->user_id !== $u->id;
+-            throw new BusinessRuleException($other
+-                ? "Prod. Order {$prod} sudah ditambahkan oleh leader lain."
+-                : "Prod. Order {$prod} sudah ada di daftar pekerjaan.");
++            if (preg_match('/^MAN_\d+$/', $prod)) {
++                // Nomor MAN_ dibagi semua leader. Kalau sudah terpakai (mis. oleh leader lain), pakai nomor berikutnya.
++                $prod = $this->nextManualProd();
++            } else {
++                $other = $u->role === 'leader' && $dup->user_id !== $u->id;
++                throw new BusinessRuleException($other
++                    ? "Prod. Order {$prod} sudah ditambahkan oleh leader lain."
++                    : "Prod. Order {$prod} sudah ada di daftar pekerjaan.");
++            }
+         }
+ 
+         $niks = $this->resolveTeam($data['team'] ?? []);
+@@ -207,7 +212,7 @@
+         return $raw;
+     }
+ 
+-    private function nextManualProd(): string
++    public function nextManualProd(): string
+     {
+         // pola tetap (tanpa input pengguna), aman dari injeksi
+         $max = (int) WorkOrder::withoutGlobalScopes()->whereRaw("prod_order REGEXP '^MAN_[0-9]+$'")
+--- a/app/Http/Controllers/WorkOrderController.php
++++ b/app/Http/Controllers/WorkOrderController.php
+@@ -48,6 +48,12 @@
+         ]);
+     }
+ 
++    /** GET /api/work-orders/next-manual : nomor MAN_ berikutnya, dihitung dari SEMUA pekerjaan (bukan hanya milik leader ini). */
++    public function nextManual(): JsonResponse
++    {
++        return response()->json(['ok' => true, 'prod' => $this->svc->nextManualProd()]);
++    }
++
+     public function store(Request $r): JsonResponse
+     {
+         $data = $this->check($r, [
+--- a/routes/web.php
++++ b/routes/web.php
+@@ -39,6 +39,7 @@
+     /* ---- Leader & Public ---- */
+     Route::get('/api/employees', [EmployeeController::class, 'index']);
+     Route::get('/api/work-orders', [WorkOrderController::class, 'index']);
++    Route::get('/api/work-orders/next-manual', [WorkOrderController::class, 'nextManual']);
+     Route::post('/api/work-orders', [WorkOrderController::class, 'store']);
+     Route::patch('/api/work-orders/{prod}/progress', [WorkOrderController::class, 'progress']);
+     Route::post('/api/work-orders/{prod}/hold', [WorkOrderController::class, 'hold']);
+--- a/public/assets/store.js
++++ b/public/assets/store.js
+@@ -257,6 +257,9 @@
+ 
+     /* Pekerjaan tanpa picklist: MAN_0001, MAN_0002, ... (server memeriksa lagi kalau ada yang kembar) */
+     function nextManualProd() {
++        // Nomor MAN_ dibagi semua leader, jadi tanya server dulu (cadangan: hitung dari pekerjaan yang tampil)
++        const r = http('GET', '/api/work-orders/next-manual');
++        if (isOk(r) && r.json.prod) return r.json.prod;
+         let max = 0;
+         jobs().forEach(j => { const m = /^MAN_(\d+)$/i.exec(String(j.prod)); if (m) max = Math.max(max, Number(m[1])); });
+         return 'MAN_' + String(max + 1).padStart(4, '0');

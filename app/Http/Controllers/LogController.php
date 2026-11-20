@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\WorkOrder;
 use App\Models\WorkOrderLog;
 use App\Services\WorkOrderService;
 use App\Support\Viber;
@@ -29,6 +30,11 @@ class LogController extends Controller
         }
         if (! empty($d['prod'])) {
             $q->where('prod_order', $d['prod']);
+        }
+
+        // Leader hanya melihat riwayat pekerjaan miliknya (scope OwnJobsScope ikut berlaku di subquery)
+        if ($r->user()->role === 'leader') {
+            $q->whereIn('work_order_id', WorkOrder::select('id'));
         }
 
         return response()->json([

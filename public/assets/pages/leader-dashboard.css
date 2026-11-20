@@ -130,8 +130,8 @@ tbody tr:hover{background:#fbfdff}
 .collapsed .brand-name,.collapsed .nav-label{display:none}
 .collapsed .nav a{justify-content:center;padding:12px 0}
 .collapsed .sidebar-bottom{padding-left:0;padding-right:0}
-.collapsed .logout{font-size:0}
-.collapsed .logout::after{content:"↪";font-size:15px}
+.logout{display:flex;align-items:center;justify-content:center;gap:8px}
+.collapsed .logout-label{display:none}
 
 /* MODAL UMUM */
 .modal-backdrop{position:fixed;inset:0;background:rgba(20,34,50,.42);display:none;align-items:center;justify-content:center;padding:20px;z-index:30}

@@ -10,6 +10,7 @@ use App\Http\Controllers\SapController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkOrderController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ExportController;
 
 Route::get('/', [PageController::class, 'home']);
 Route::get('/login', [PageController::class, 'login'])->name('login');
@@ -39,6 +40,7 @@ Route::middleware('auth')->group(function () {
     /* ---- Leader & Public ---- */
     Route::get('/api/employees', [EmployeeController::class, 'index']);
     Route::get('/api/work-orders', [WorkOrderController::class, 'index']);
+    Route::get('/api/work-orders/next-manual', [WorkOrderController::class, 'nextManual']);
     Route::post('/api/work-orders', [WorkOrderController::class, 'store']);
     Route::patch('/api/work-orders/{prod}/progress', [WorkOrderController::class, 'progress']);
     Route::post('/api/work-orders/{prod}/hold', [WorkOrderController::class, 'hold']);
@@ -55,7 +57,7 @@ Route::middleware('auth')->group(function () {
 
         Route::put('/api/work-orders/{prod}', [WorkOrderController::class, 'update']);
         Route::put('/api/work-orders/{prod}/target', [WorkOrderController::class, 'target']);
-        // detail satu Prod. Order dari SAP (tombol "Tampilkan detail" di dashboard)
+        Route::post('/api/export/plan', [ExportController::class, 'plan']);
         Route::get('/api/sap/prod-order/{prod}', [SapController::class, 'prodOrder'])->middleware('throttle:60,1');
 
         Route::post('/api/work-orders/{prod}/reactivate', [WorkOrderController::class, 'reactivate']);

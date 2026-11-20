@@ -257,6 +257,9 @@
 
     /* Pekerjaan tanpa picklist: MAN_0001, MAN_0002, ... (server memeriksa lagi kalau ada yang kembar) */
     function nextManualProd() {
+        // Nomor MAN_ dibagi semua leader, jadi tanya server dulu (cadangan: hitung dari pekerjaan yang tampil)
+        const r = http('GET', '/api/work-orders/next-manual');
+        if (isOk(r) && r.json.prod) return r.json.prod;
         let max = 0;
         jobs().forEach(j => { const m = /^MAN_(\d+)$/i.exec(String(j.prod)); if (m) max = Math.max(max, Number(m[1])); });
         return 'MAN_' + String(max + 1).padStart(4, '0');
