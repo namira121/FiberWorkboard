@@ -143,18 +143,16 @@
             <div class="heading">
                 <div>
                     <h1>Dashboard</h1>
-                    <p>Pantau pekerjaan, progress tim, dan karyawan yang bertanggung jawab.</p>
                 </div>
                 <div class="heading-side">
                     <button type="button" class="hbtn ghost" id="exportBtn" title="Export nama, proses, dan target ke Excel">⇩ Export Excel</button>
                     <a class="hbtn primary" href="/leader/scan">⌕ Scan picklist</a>
-                    <div class="date-note">◷ &nbsp; Data pekerjaan harian</div>
                 </div>
             </div>
 
             <!-- FORM TAMBAH JOB MANUAL -->
             <section class="manual-card" aria-labelledby="manualTitle">
-                <h2 class="manual-title" id="manualTitle">Tambah job manual</h2>
+                <h2 class="manual-title" id="manualTitle">Tambah Pekerjaan</h2>
                 <form id="manualForm" novalidate autocomplete="off">
                     <div class="manual-grid six">
                         <div class="m-field c3"><label for="mProd">Prod. Order <span style="color:#c83e39">*</span></label><div class="nik-row"><input id="mProd" placeholder="400155497 / MAN_0001"><button type="button" class="nik-add" id="manProdBtn" style="width:auto;padding:0 11px;font-size:11px" title="Pekerjaan tanpa picklist: isi otomatis MAN_0001, MAN_0002, ...">MAN</button></div></div>
@@ -173,7 +171,7 @@
                     <div class="nik-chips" id="nikChips" aria-label="Karyawan yang akan ditugaskan"></div>
                     <div class="manual-foot">
                         <div class="manual-msg">
-                            <div class="m-hint">Prod. Order wajib diisi dan menjadi kunci unik. Pekerjaan tanpa picklist memakai MAN_0001 (tekan tombol MAN). No. Material, No. SO, dan NIK boleh dikosongkan. Untuk lebih dari 1 karyawan, tekan Enter atau tombol ＋ setelah mengisi tiap NIK.</div>
+                            <div class="m-hint"></div>
                             <div class="status-error" id="manualError" role="alert"></div>
                         </div>
                         <button type="submit" class="manual-submit">Tambah ke daftar</button>

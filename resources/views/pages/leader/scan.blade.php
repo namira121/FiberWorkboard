@@ -31,7 +31,6 @@
             <div class="heading">
                 <div>
                     <h1>Scan picklist</h1>
-                    <p>Scan barcode picklist untuk membaca data pekerjaan, lalu scan barcode karyawan untuk menentukan tim pengerja.</p>
                 </div>
                 <a class="btn" href="/leader/dashboard">← Kembali ke dashboard</a>
             </div>
@@ -65,20 +64,12 @@
                             <button class="btn btn-primary btn-sm" id="startCamera" type="button">◉ Scan picklist</button>
                             <button class="btn btn-sm hidden" id="stopCamera" type="button">Matikan kamera</button>
                             <button class="btn btn-sm hidden" id="zoomBtn" type="button">Zoom 1×</button>
-                            <button class="btn btn-sm" id="photoBtn" type="button">📷 Foto barcode panjang</button>
+                            <button class="btn btn-sm" id="photoBtn" type="button">📷 Foto Barcode</button>
                             <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
                         </div>
                         <div id="engineInfo" style="font-size:11px;color:#8a97a6;text-align:center;margin-top:6px"></div>
 
                         <div class="scan-message" id="cameraError" role="alert"></div>
-
-                        <div class="manual-block">
-                            <label class="field-label" for="manualProd">Kamera bermasalah? Ketik isi barcode picklist</label>
-                            <div class="input-row">
-                                <input id="manualProd" placeholder="Contoh: 100030008-000002-0402" autocomplete="off">
-                                <button class="btn" id="manualFind" type="button">Cari</button>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- HASIL SCAN -->
