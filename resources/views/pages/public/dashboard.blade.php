@@ -117,7 +117,7 @@
 
             <!-- FORM TAMBAH JOB MANUAL -->
             <section class="manual-card" aria-labelledby="manualTitle">
-                <h2 class="manual-title" id="manualTitle">Tambah job manual</h2>
+                <h2 class="manual-title" id="manualTitle">Tambah Pekerjaan</h2>
                 <form id="manualForm" novalidate autocomplete="off">
                     <div class="manual-grid six">
                         <div class="m-field c3"><label for="mProd">Prod. Order <span style="color:#c83e39">*</span></label><div class="nik-row"><input id="mProd" placeholder="400155497 / MAN_0001"><button type="button" class="nik-add" id="manProdBtn" style="width:auto;padding:0 11px;font-size:11px" title="Pekerjaan tanpa picklist: isi otomatis MAN_0001, MAN_0002, ...">MAN</button></div></div>
@@ -179,6 +179,7 @@
 
 @endverbatim
 @include('partials.footer')
+@include('partials.manual-collapse')
 @verbatim
     
 @endverbatim

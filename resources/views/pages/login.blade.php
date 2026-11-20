@@ -28,7 +28,6 @@
             <!-- Card Header -->
             <div class="mb-6">
                 <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Masuk</h1>
-                <p class="text-xs text-gray-500 mt-1.5 font-normal">Masukkan NIK dan password untuk melanjutkan. Cukup sekali di HP ini, berikutnya langsung masuk.</p>
             </div>
 
             <!-- Login Form -->

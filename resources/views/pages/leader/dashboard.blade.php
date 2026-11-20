@@ -214,6 +214,7 @@
 
 @endverbatim
 @include('partials.footer')
+@include('partials.manual-collapse')
 @verbatim
     
 @endverbatim
